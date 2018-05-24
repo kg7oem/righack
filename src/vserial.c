@@ -87,6 +87,7 @@ vserial_create(char *name_arg) {
         util_fatal_perror("could not tcgettr()");
     }
 
+    // FIXME enable line mode? Is this correct?
     master_terminfo->c_lflag |= EXTPROC;
 
     if (tcsetattr(master, TCSANOW, master_terminfo)) {
