@@ -78,12 +78,33 @@ vserial_destroy(VSERIAL *p) {
 VSERIAL *
 vserial_create(char *name_arg) {
     VSERIAL *p = vserial_alloc();
+    struct termios *master_terminfo = &(p->pty_master.terminfo);
     char *name = NULL;
     int master, slave;
     char slave_path[PATH_MAX];
+    int nonzero = 1;
 
     if (openpty(&master, &slave, slave_path, NULL, NULL)) {
         perror("could not openpty()");
+        abort();
+    }
+
+    // enable packet mode so the master will be notified about
+    // ioctl() on the slave
+    if(ioctl(master, TIOCPKT, &nonzero) == -1) {
+        perror("could not ioctl()");
+        abort();
+    }
+
+    if (tcgetattr(master, master_terminfo)) {
+        perror("could not tcgettr()");
+        abort();
+    }
+
+    master_terminfo->c_lflag |= EXTPROC;
+
+    if (tcsetattr(master, TCSANOW, master_terminfo)) {
+        perror("could not tcsetattr()");
         abort();
     }
 
