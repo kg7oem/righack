@@ -15,6 +15,7 @@
 #include <termios.h>
 #include <unistd.h>
 
+#include "util.h"
 #include "vserial.h"
 
 struct vserial_pty_t {
@@ -42,14 +43,7 @@ struct vserial_t {
 
 static VSERIAL *
 vserial_alloc(void) {
-    VSERIAL *p = malloc(sizeof(VSERIAL));
-
-    if (p == NULL) {
-//        abort("malloc() returned NULL");
-        abort();
-    }
-
-    memset(p, 0, sizeof(VSERIAL));
+    VSERIAL *p = util_malloc(sizeof(VSERIAL));
 
     return(p);
 }
