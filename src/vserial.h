@@ -12,8 +12,8 @@
 
 // VSERIAL * is supposed to be an opaque handle and the vserial interface
 // isn't tied to POSIX so this could in theory work on Windows
-struct _vserial_t;
-typedef struct _vserial_t VSERIAL;
+struct vserial_t;
+typedef struct vserial_t VSERIAL;
 
 struct vserial_control_lines {
     bool rts;

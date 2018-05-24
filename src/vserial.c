@@ -17,27 +17,25 @@
 
 #include "vserial.h"
 
-struct _vserial_pty_t {
+struct vserial_pty_t {
     char *path;
     int fd;
     struct termios terminfo;
 };
 
-struct _vserial_handlers_t {
+struct vserial_handlers_t {
     void *control_line; // function pointer that is invoked for control
                         // line changes
     void *recv_ready; // function pointer for when data is ready on the master PTY
     void *send_ready; // function pointer for when data can be sent on the master PTY
 };
 
-struct _vserial_t {
+struct vserial_t {
     char *name;
-    struct _vserial_pty_t pty_master;
-    struct _vserial_pty_t pty_slave;
-    struct _vserial_handlers_t handlers;
+    struct vserial_pty_t pty_master;
+    struct vserial_pty_t pty_slave;
+    struct vserial_handlers_t handlers;
 };
-
-static VSERIAL * vserial_alloc(void);
 
 static VSERIAL *
 vserial_alloc(void) {
