@@ -18,5 +18,5 @@ fi
 mkdir -p "$BUILD_DIR"
 pushd "$BUILD_DIR"
 
-cmake "$SRC_DIR"
+cmake -DCMAKE_BUILD_TYPE=Debug "$SRC_DIR"
 make
