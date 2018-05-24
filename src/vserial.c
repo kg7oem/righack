@@ -24,10 +24,13 @@ struct vserial_pty_t {
 };
 
 struct vserial_handlers_t {
-    void *control_line; // function pointer that is invoked for control
-                        // line changes
-    void *recv_ready; // function pointer for when data is ready on the master PTY
-    void *send_ready; // function pointer for when data can be sent on the master PTY
+    vserial_control_line_handler control_line;
+    void *control_line_context;
+    vserial_recv_data_handler recv_data;
+    void *recv_data_context;
+    vserial_send_ready_handler send_ready;
+    void *send_ready_context;
+    bool send_ready_enabled;
 };
 
 struct vserial_t {
@@ -132,7 +135,35 @@ vserial_create(char *name_arg) {
     return p;
 }
 
+void
+vserial_register_control_line(VSERIAL *vserial, vserial_control_line_handler handler, void *context) {
+    vserial->handlers.control_line = handler;
+    vserial->handlers.control_line_context = context;
+}
+
+void
+vserial_register_recv_data(VSERIAL *vserial, vserial_recv_data_handler handler, void *context) {
+    vserial->handlers.recv_data = handler;
+    vserial->handlers.recv_data_context = context;
+}
+
+void
+vserial_register_send_ready(VSERIAL *vserial, vserial_send_ready_handler handler, void *context) {
+    vserial->handlers.send_ready = handler;
+    vserial->handlers.send_ready_context = context;
+}
+
 char *
 vserial_get_name(VSERIAL *p) {
     return p->name;
+}
+
+bool
+vserial_get_send_ready_enabled(VSERIAL *p) {
+    return p->handlers.send_ready_enabled;
+}
+
+void
+vserial_set_send_ready_enabled(VSERIAL *p, bool value) {
+    p->handlers.send_ready_enabled = value;
 }

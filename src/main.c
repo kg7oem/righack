@@ -19,8 +19,10 @@ main(int argc, char **argv) {
     }
 
     VSERIAL *test = vserial_create(name);
+    vserial_set_send_ready_enabled(test, true);
 
     printf("Fake serial device name: %s\n", vserial_get_name(test));
+    printf("send_ready_enabled: %d\n", vserial_get_send_ready_enabled(test));
 
     vserial_destroy(test);
 
