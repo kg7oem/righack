@@ -41,18 +41,10 @@ struct vserial_t {
     struct vserial_handlers_t handlers;
 };
 
-static VSERIAL *
-vserial_alloc(void) {
-    VSERIAL *p = util_malloc(sizeof(VSERIAL));
-
-    return(p);
-}
-
 void
 vserial_destroy(VSERIAL *p) {
     if (p == NULL) {
-//        abort("attempt to vserial_free() a null pointer");
-        abort();
+        util_fatal("attempt to vserial_free() a null pointer\n");
     }
 
     if (p->pty_master.path != NULL) {
@@ -74,7 +66,7 @@ vserial_destroy(VSERIAL *p) {
 
 VSERIAL *
 vserial_create(char *name_arg) {
-    VSERIAL *p = vserial_alloc();
+    VSERIAL *p = util_malloc(sizeof(VSERIAL));
     struct termios *master_terminfo = &(p->pty_master.terminfo);
     char *name = NULL;
     int master, slave;
@@ -82,27 +74,23 @@ vserial_create(char *name_arg) {
     int nonzero = 1;
 
     if (openpty(&master, &slave, slave_path, NULL, NULL)) {
-        perror("could not openpty()");
-        abort();
+        util_fatal_perror("could not openpty(): ");
     }
 
     // enable packet mode so the master will be notified about
     // ioctl() on the slave
     if(ioctl(master, TIOCPKT, &nonzero) == -1) {
-        perror("could not ioctl()");
-        abort();
+        util_fatal_perror("could not ioctl()");
     }
 
     if (tcgetattr(master, master_terminfo)) {
-        perror("could not tcgettr()");
-        abort();
+        util_fatal_perror("could not tcgettr()");
     }
 
     master_terminfo->c_lflag |= EXTPROC;
 
     if (tcsetattr(master, TCSANOW, master_terminfo)) {
-        perror("could not tcsetattr()");
-        abort();
+        util_fatal_perror("could not tcsetattr()");
     }
 
     if (name_arg == NULL) {
@@ -112,15 +100,20 @@ vserial_create(char *name_arg) {
     }
 
     if (strlen(name) >= PATH_MAX) {
-        abort();
+        util_fatal("length of name(%d) >= PATH_MAX(%d)\n", strlen(name), PATH_MAX);
     }
 
     if (strlen(slave_path) >= PATH_MAX) {
-        abort();
+        util_fatal("length of slave_path(%d) >= PATH_MAX(%d)\n", strlen(slave_path), PATH_MAX);
     }
 
-    p->name = strndup(name, PATH_MAX);
-    p->pty_slave.path = strndup(slave_path, PATH_MAX);
+    if ((p->name = strndup(name, PATH_MAX)) == NULL) {
+        util_fatal("strndup() returned NULL\n");
+    }
+
+    if ((p->pty_slave.path = strndup(slave_path, PATH_MAX)) == NULL) {
+        util_fatal("strndup() returned NULL\n");
+    }
 
     if (name_arg != NULL) {
         fprintf(stderr, "Would symlink %s to %s\n", p->name, p->pty_slave.path);
