@@ -12,34 +12,11 @@
 #include <stdlib.h>
 #include <string.h>
 #include <sys/ioctl.h>
-#include <termios.h>
 #include <unistd.h>
 
 #include "util.h"
 #include "vserial.h"
-
-struct vserial_pty_t {
-    char *path;
-    int fd;
-    struct termios terminfo;
-};
-
-struct vserial_handlers_t {
-    vserial_control_line_handler control_line;
-    void *control_line_context;
-    vserial_recv_data_handler recv_data;
-    void *recv_data_context;
-    vserial_send_ready_handler send_ready;
-    void *send_ready_context;
-    bool send_ready_enabled;
-};
-
-struct vserial_t {
-    char *name;
-    struct vserial_pty_t pty_master;
-    struct vserial_pty_t pty_slave;
-    struct vserial_handlers_t handlers;
-};
+#include "vserial-private.h"
 
 void
 vserial_destroy(VSERIAL *p) {
@@ -69,28 +46,29 @@ vserial_create(char *name_arg) {
     VSERIAL *p = util_malloc(sizeof(VSERIAL));
     struct termios *master_terminfo = &(p->pty_master.terminfo);
     char *name = NULL;
-    int master, slave;
+    int *master = &(p->pty_master.fd);
+    int *slave = &(p->pty_slave.fd);
     char slave_path[PATH_MAX];
     int nonzero = 1;
 
-    if (openpty(&master, &slave, slave_path, NULL, NULL)) {
+    if (openpty(master, slave, slave_path, NULL, NULL)) {
         util_fatal_perror("could not openpty(): ");
     }
 
     // enable packet mode so the master will be notified about
     // ioctl() on the slave
-    if(ioctl(master, TIOCPKT, &nonzero) == -1) {
+    if(ioctl(*master, TIOCPKT, &nonzero) == -1) {
         util_fatal_perror("could not ioctl()");
     }
 
-    if (tcgetattr(master, master_terminfo)) {
+    if (tcgetattr(*master, master_terminfo)) {
         util_fatal_perror("could not tcgettr()");
     }
 
     // FIXME enable line mode? Is this correct?
     master_terminfo->c_lflag |= EXTPROC;
 
-    if (tcsetattr(master, TCSANOW, master_terminfo)) {
+    if (tcsetattr(*master, TCSANOW, master_terminfo)) {
         util_fatal_perror("could not tcsetattr()");
     }
 

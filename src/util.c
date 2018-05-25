@@ -12,6 +12,7 @@
 
 #include "util.h"
 
+// FIXME rename this to util_zalloc() - zero alloc, always zeros things
 void *
 util_malloc(size_t bytes) {
     void *p = calloc(1, bytes);
@@ -22,6 +23,12 @@ util_malloc(size_t bytes) {
 
     return p;
 }
+
+// FIXME make this be a realloc() that also has zerod memory
+// void * util_zrealloc(void *, int)
+
+// FIXME make ths be a zrealloc() that also frees the original memory
+// void * util_zreallocf(void *, int)
 
 void
 util_fatal(char *fmt, ...) {
