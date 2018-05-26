@@ -184,13 +184,15 @@ runloop_start(void) {
                 uint packet_type = (uint)tmp[0];
 
                 if (packet_type == TIOCPKT_DATA) {
-                    printf("Got a data packet\n");
+			printf("Got a data packet\n");
+                } else {
+			printf("Packet type: %u\n", packet_type);
+
+			if (packet_type & (1 << 7)) {
+	                    runloop_call_control_line_handler(watched[0].fd);
+			}
                 }
             }
-        }
-
-        if (revents & POLLPRI) {
-            runloop_call_control_line_handler(watched[0].fd);
         }
     }
 
