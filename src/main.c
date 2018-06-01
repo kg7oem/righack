@@ -14,7 +14,7 @@
 
 void
 control_line_handler(VSERIAL *vserial, struct vserial_control_line *control_lines) {
-    char *message = (char *)vserial_get_context(vserial);
+    char *message = vserial_get_context(vserial);
 
     printf("In the control line handler; context=%p\n", message);
     printf("RTS:%d CTS:%d\n", control_lines->rts, control_lines->cts);
@@ -38,8 +38,6 @@ main(int argc, char **argv) {
     char *name = NULL;
     struct vserial_handlers handlers = {
             .control_line = control_line_handler,
-            .recv_data = NULL,
-            .send_ready = NULL,
     };
 
     if (argc > 1) {

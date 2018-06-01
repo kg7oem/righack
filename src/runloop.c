@@ -5,10 +5,14 @@
  *      Author: tyler
  */
 
+#define _GNU_SOURCE
+
 // FIXME this include can't be right
 #include <asm-generic/ioctls.h>
+#include <errno.h>
 #include <inttypes.h>
 #include <poll.h>
+#include <signal.h>
 #include <stdio.h>
 #include <string.h>
 #include <sys/ioctl.h>
@@ -16,6 +20,9 @@
 #include "runloop.h"
 #include "util.h"
 #include "vserial-private.h"
+
+// true if the runloop should be running
+bool should_run = false;
 
 struct {
     // number of fds in watched
@@ -133,17 +140,114 @@ runloop_call_control_line_handler(int fd) {
     return;
 }
 
+sigset_t *
+runloop_create_empty_sigset(void) {
+    sigset_t *set = util_malloc(sizeof(sigset_t));
+
+    if (sigemptyset(set)) {
+        util_fatal_perror("could not sigemptyset: ");
+    }
+
+    return set;
+}
+
+sigset_t *
+runloop_create_sigint_sigset(void) {
+    sigset_t *set = runloop_create_empty_sigset();
+
+    if (sigaddset(set, SIGINT)) {
+        util_fatal_perror("could not sigaddset: ");
+    }
+
+    return set;
+}
+
+void
+runloop_block_sigint(void) {
+    sigset_t *will_block = runloop_create_sigint_sigset();
+    int retval = pthread_sigmask(SIG_BLOCK, will_block, NULL);
+
+    if (retval) {
+        // FIXME need to improve this so it has the error text
+        util_fatal("could not pthread_sigmask() - and can't perror, no: %d", retval);
+    }
+
+    free(will_block);
+}
+
+void
+runloop_unblock_sigint(void) {
+    sigset_t *will_unblock = runloop_create_sigint_sigset();
+    int retval = pthread_sigmask(SIG_BLOCK, will_unblock, NULL);
+
+    if (retval) {
+        // FIXME need to improve this so it has the error text
+        util_fatal("could not pthread_sigmask() - and can't perror, no: %d", retval);
+    }
+
+    free(will_unblock);
+}
+
+void
+runloop_sigint_handler(UNUSED int signal) {
+    should_run = 0;
+    alarm(1);
+}
+
+void
+runloop_sigalrm_handler(UNUSED int signal) {
+    util_fatal("Timeout when trying to cleanup from runloop\n");
+}
+
+void
+runloop_install_signal_handlers(void) {
+    if (signal(SIGINT, runloop_sigint_handler) == SIG_ERR) {
+        util_fatal_perror("Could not register INT signal handler: ");
+    }
+
+    if (signal(SIGALRM, runloop_sigalrm_handler) == SIG_ERR) {
+        util_fatal_perror("Could not register ALRM signal handler: ");
+    }
+}
+
+void
+runloop_remove_signal_handlers(void) {
+    if (signal(SIGINT, SIG_DFL) == SIG_ERR) {
+        util_fatal_perror("Could not remove INT signal handler: ");
+    }
+
+    if (signal(SIGALRM, SIG_DFL) == SIG_ERR) {
+        util_fatal_perror("could not remove ALRM signal handler: ");
+    }
+}
+
 int
 runloop_start(void) {
     struct pollfd *watched = watched_descriptors.watched;
     int nfds = watched_descriptors.num_fd;
+    sigset_t *masked_signals = runloop_create_empty_sigset();
+
+    should_run = 1;
+
+    runloop_block_sigint();
+    runloop_install_signal_handlers();
 
     while(1) {
-        printf("About to call poll(*, %d, -1)\n", nfds);
-        int retval = poll(watched, nfds, -1);
+        printf("About to call poll(*, %d, -1); should_run: %i\n", nfds, should_run);
+
+        if (! should_run) {
+            printf("Leaving runloop because of ctrl+c\n");
+            break;
+        }
+
+        int retval = ppoll(watched, nfds, NULL, masked_signals);
 
         if (retval == -1) {
-            util_fatal_perror("poll() failed:");
+            if (errno == EINTR) {
+                continue;
+            }
+
+            util_fatal_perror("ppoll() failed:");
         }
 
         printf("poll() returned: %d\n", retval);
@@ -185,5 +289,11 @@ runloop_start(void) {
         }
     }
 
-    return 1;
+    alarm(0);
+    runloop_remove_signal_handlers();
+    runloop_unblock_sigint();
+
+    free(masked_signals);
+
+    return 0;
 }
