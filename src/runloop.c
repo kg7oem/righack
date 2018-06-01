@@ -5,13 +5,14 @@
  *      Author: tyler
  */
 
+// FIXME this include can't be right
 #include <asm-generic/ioctls.h>
 #include <inttypes.h>
 #include <poll.h>
 #include <stdio.h>
 #include <string.h>
 #include <sys/ioctl.h>
-
+#include <unistd.h>
 #include "runloop.h"
 #include "util.h"
 #include "vserial-private.h"
@@ -153,7 +154,7 @@ runloop_start(void) {
             short revents = watched[i].revents;
 
             if (revents & POLLERR) {
-                printf("Got POLLERR\n");
+                util_fatal("Got POLLERR\n");
             }
 
             if (revents & POLLIN) {

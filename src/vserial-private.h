@@ -9,7 +9,6 @@
 #define SRC_VSERIAL_PRIVATE_H_
 
 #include <termios.h>
-#include <unistd.h>
 
 struct vserial_pty_t {
     char *path;

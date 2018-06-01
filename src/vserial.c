@@ -22,7 +22,7 @@
 void
 vserial_destroy(VSERIAL *p) {
     if (p == NULL) {
-        util_fatal("attempt to vserial_free() a null pointer\n");
+        util_fatal("attempt to vserial_destroy() a null pointer\n");
     }
 
     if (p->pty_master.path != NULL) {
@@ -45,10 +45,10 @@ vserial_destroy(VSERIAL *p) {
 VSERIAL *
 vserial_create(char *name_arg) {
     VSERIAL *p = util_malloc(sizeof(VSERIAL));
-    struct termios *master_terminfo = &(p->pty_master.terminfo);
+    struct termios *master_terminfo = &p->pty_master.terminfo;
     char *name = NULL;
-    int *master = &(p->pty_master.fd);
-    int *slave = &(p->pty_slave.fd);
+    int *master = &p->pty_master.fd;
+    int *slave = &p->pty_slave.fd;
     char slave_path[PATH_MAX];
     int nonzero = 1;
 
@@ -56,8 +56,8 @@ vserial_create(char *name_arg) {
         util_fatal_perror("could not openpty(): ");
     }
 
-    // enable packet mode so the master will be notified about
-    // ioctl() on the slave
+    // packet mode enables delivery of status information
+    // about the slave to the master
     if(ioctl(*master, TIOCPKT, &nonzero) == -1) {
         util_fatal_perror("could not ioctl()");
     }
@@ -66,7 +66,8 @@ vserial_create(char *name_arg) {
         util_fatal_perror("could not tcgettr()");
     }
 
-    // FIXME enable line mode? Is this correct?
+    // EXTPROC causes an event whenever tcsetattr() is called
+    // on the slave
     master_terminfo->c_lflag |= EXTPROC;
 
     if (tcsetattr(*master, TCSANOW, master_terminfo)) {
@@ -107,6 +108,13 @@ vserial_get_name(VSERIAL *p) {
     return p->name;
 }
 
+// copies the veserial_handlers from vserial into handlers
+void
+vserial_copy_handlers(UNUSED VSERIAL *vserial, UNUSED struct vserial_handlers *handlers) {
+    util_fatal("vserial_copy_handlers(): not implemented");
+}
+
+// updates the handlers stored in vserial with the contents of handlers
 void
 vserial_set_handlers(VSERIAL *vserial, struct vserial_handlers *handlers) {
     memcpy(&vserial->handlers, handlers, sizeof(struct vserial_handlers));
