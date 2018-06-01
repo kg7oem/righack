@@ -17,22 +17,33 @@ control_line_handler(struct vserial_control_line *control_lines, void *context) 
     printf("RTS:%d CTS:%d\n", control_lines->rts, control_lines->cts);
     printf("DTR:%d DSR:%d\n", control_lines->dtr, control_lines->dsr);
     printf("\n");
+
+    if (control_lines->rts) {
+        printf("TRANSMIT!!!!\n");
+        system("rig T 1");
+    } else {
+        printf("Done with transmit\n");
+        system("rig T 0");
+    }
+
+    printf("\n\n");
 }
 
 int
 main(int argc, char **argv) {
     char *name = NULL;
+    struct vserial_handlers handlers = {
+            .control_line = control_line_handler,
+    };
 
     if (argc > 1) {
         name = argv[1];
     }
 
     VSERIAL *test = vserial_create(name);
-    vserial_set_send_ready_enabled(test, true);
-    vserial_register_control_line(test, control_line_handler, NULL);
+    vserial_set_handlers(test, &handlers);
 
     printf("Fake serial device name: %s\n", vserial_get_name(test));
-    printf("send_ready_enabled: %d\n", vserial_get_send_ready_enabled(test));
 
     runloop_add_vserial(test);
 

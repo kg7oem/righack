@@ -28,15 +28,19 @@ typedef void (*vserial_control_line_handler)(struct vserial_control_line *, void
 typedef void (*vserial_recv_data_handler)(char *, size_t, void *);
 typedef void (*vserial_send_ready_handler)(void *);
 
+struct vserial_handlers {
+    vserial_control_line_handler control_line;
+    vserial_recv_data_handler recv_data;
+    vserial_send_ready_handler send_ready;
+};
+
 void vserial_destroy(VSERIAL *);
 VSERIAL * vserial_create(char *);
 
-void vserial_register_control_line(VSERIAL *, vserial_control_line_handler, void *);
-void vserial_register_recv_data(VSERIAL *, vserial_recv_data_handler, void *);
-void vserial_register_send_ready(VSERIAL *, vserial_send_ready_handler, void *);
-
 char * vserial_get_name(VSERIAL *);
-bool vserial_get_send_ready_enabled(VSERIAL *);
-void vserial_set_send_ready_enabled(VSERIAL *, bool);
+void vserial_copy_handlers(VSERIAL *, struct vserial_handlers *);
+void vserial_set_handlers(VSERIAL *, struct vserial_handlers *);
+void * vserial_get_context(VSERIAL *);
+void vserial_set_context(VSERIAL *, void *);
 
 #endif /* SRC_VSERIAL_H_ */

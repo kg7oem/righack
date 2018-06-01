@@ -12,6 +12,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <sys/ioctl.h>
+#include <termios.h>
 #include <unistd.h>
 
 #include "util.h"
@@ -101,35 +102,38 @@ vserial_create(char *name_arg) {
     return p;
 }
 
-void
-vserial_register_control_line(VSERIAL *vserial, vserial_control_line_handler handler, void *context) {
-    vserial->handlers.control_line = handler;
-    vserial->handlers.control_line_context = context;
-}
-
-void
-vserial_register_recv_data(VSERIAL *vserial, vserial_recv_data_handler handler, void *context) {
-    vserial->handlers.recv_data = handler;
-    vserial->handlers.recv_data_context = context;
-}
-
-void
-vserial_register_send_ready(VSERIAL *vserial, vserial_send_ready_handler handler, void *context) {
-    vserial->handlers.send_ready = handler;
-    vserial->handlers.send_ready_context = context;
-}
-
 char *
 vserial_get_name(VSERIAL *p) {
     return p->name;
 }
 
-bool
-vserial_get_send_ready_enabled(VSERIAL *p) {
-    return p->handlers.send_ready_enabled;
+void
+vserial_set_handlers(VSERIAL *vserial, struct vserial_handlers *handlers) {
+    memcpy(&vserial->handlers, handlers, sizeof(struct vserial_handlers));
 }
 
 void
-vserial_set_send_ready_enabled(VSERIAL *p, bool value) {
-    p->handlers.send_ready_enabled = value;
+vserial_call_control_line_handler(VSERIAL *vserial) {
+    int slave_fd = vserial->pty_slave.fd;
+    struct vserial_control_line control_lines;
+    int modem_bits;
+
+    if (vserial->handlers.control_line == NULL) {
+        return;
+    }
+
+    printf("the slave FD is %d\n", slave_fd);
+
+    if (ioctl(slave_fd, TIOCMGET, &modem_bits) == -1) {
+        util_fatal_perror("Could not ioctl(TIOCMGET): ");
+    }
+
+    control_lines.cts = modem_bits & TIOCM_CTS;
+    control_lines.rts = modem_bits & TIOCM_RTS;
+    control_lines.dtr = modem_bits & TIOCM_DTR;
+    control_lines.dsr = modem_bits & TIOCM_DSR;
+
+    vserial->handlers.control_line(&control_lines, NULL);
+
+    return;
 }
