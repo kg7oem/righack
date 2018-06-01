@@ -22,6 +22,7 @@ struct vserial_t {
     struct vserial_pty_t pty_master;
     struct vserial_pty_t pty_slave;
     struct vserial_handlers handlers;
+    void * handler_context;
 };
 
 void vserial_call_control_line_handler(VSERIAL *);

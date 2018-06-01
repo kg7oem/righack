@@ -24,9 +24,9 @@ struct vserial_control_line {
     bool dsr;
 };
 
-typedef void (*vserial_control_line_handler)(struct vserial_control_line *, void *);
-typedef void (*vserial_recv_data_handler)(char *, size_t, void *);
-typedef void (*vserial_send_ready_handler)(void *);
+typedef void (*vserial_control_line_handler)(VSERIAL *, struct vserial_control_line *);
+typedef void (*vserial_recv_data_handler)(VSERIAL *, char *, size_t);
+typedef void (*vserial_send_ready_handler)(VSERIAL *);
 
 struct vserial_handlers {
     vserial_control_line_handler control_line;

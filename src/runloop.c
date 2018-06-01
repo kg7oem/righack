@@ -176,6 +176,7 @@ runloop_start(void) {
                     }
 
                     if (packet_type & 128) {
+                        printf("Calling control line handler\n\n");
                         runloop_call_control_line_handler(watched[i].fd);
                     }
                 }

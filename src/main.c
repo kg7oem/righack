@@ -7,15 +7,19 @@
 
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 
 #include "runloop.h"
 #include "vserial.h"
 
 void
-control_line_handler(struct vserial_control_line *control_lines, void *context) {
-    printf("In the control line handler %p %p\n", control_lines, context);
+control_line_handler(VSERIAL *vserial, struct vserial_control_line *control_lines) {
+    char *message = (char *)vserial_get_context(vserial);
+
+    printf("In the control line handler; context=%p\n", message);
     printf("RTS:%d CTS:%d\n", control_lines->rts, control_lines->cts);
     printf("DTR:%d DSR:%d\n", control_lines->dtr, control_lines->dsr);
+    printf("Message: %s\n", message);
     printf("\n");
 
     if (control_lines->rts) {
@@ -34,6 +38,8 @@ main(int argc, char **argv) {
     char *name = NULL;
     struct vserial_handlers handlers = {
             .control_line = control_line_handler,
+            .recv_data = NULL,
+            .send_ready = NULL,
     };
 
     if (argc > 1) {
@@ -42,6 +48,7 @@ main(int argc, char **argv) {
 
     VSERIAL *test = vserial_create(name);
     vserial_set_handlers(test, &handlers);
+    vserial_set_context(test, strdup("This is a message"));
 
     printf("Fake serial device name: %s\n", vserial_get_name(test));
 
@@ -51,6 +58,7 @@ main(int argc, char **argv) {
 
     runloop_start();
 
+    free(vserial_get_context(test));
     vserial_destroy(test);
 
     exit(0);

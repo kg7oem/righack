@@ -112,6 +112,16 @@ vserial_set_handlers(VSERIAL *vserial, struct vserial_handlers *handlers) {
     memcpy(&vserial->handlers, handlers, sizeof(struct vserial_handlers));
 }
 
+void *
+vserial_get_context(VSERIAL *vserial) {
+    return vserial->handler_context;
+}
+
+void
+vserial_set_context(VSERIAL *vserial, void *p) {
+    vserial->handler_context = p;
+}
+
 void
 vserial_call_control_line_handler(VSERIAL *vserial) {
     int slave_fd = vserial->pty_slave.fd;
@@ -133,7 +143,7 @@ vserial_call_control_line_handler(VSERIAL *vserial) {
     control_lines.dtr = modem_bits & TIOCM_DTR;
     control_lines.dsr = modem_bits & TIOCM_DSR;
 
-    vserial->handlers.control_line(&control_lines, NULL);
+    vserial->handlers.control_line(vserial, &control_lines);
 
     return;
 }
