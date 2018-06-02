@@ -9,8 +9,10 @@
 #include <stdlib.h>
 #include <string.h>
 
+#include "config.h"
 #include "driver.test.h"
 #include "runloop.h"
+#include "util.h"
 #include "vserial.h"
 
 int
@@ -18,9 +20,18 @@ main(int argc, char **argv) {
     char *name = NULL;
     struct driver_info *test_driver = test_driver_info();
 
-    if (argc > 1) {
-        name = argv[1];
+    if (argc != 2) {
+        util_fatal("specify only a path to a config file");
     }
+
+    config_load(argv[1]);
+    printf("vserial sections in config: %d\n", config_count_vserial());
+
+    for(int i = 0; i < config_count_vserial(); i++) {
+        printf("  virtual serial port: %s\n", config_get_vserial_name(i));
+    }
+
+    util_fatal("bailing");
 
     VSERIAL *test = vserial_create(name);
 
@@ -42,6 +53,7 @@ main(int argc, char **argv) {
     }
 
     vserial_destroy(test);
+    free(test_driver);
 
     exit(0);
 }
