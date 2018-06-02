@@ -351,8 +351,7 @@ runloop_start(void) {
 
     should_run = 1;
 
-//    runloop_block_sigint();
-//    runloop_install_signal_handlers();
+    runloop_install_signal_handlers();
 
     while(1) {
         printf("About to call poll(*, %d, -1); should_run: %i\n", nfds, should_run);
@@ -362,7 +361,10 @@ runloop_start(void) {
             break;
         }
 
+        // FIXME when the IO loop is busy ctrl+c does not work
+//        runloop_block_sigint();
         int retval = ppoll(watched, nfds, NULL, masked_signals);
+//        runloop_unblock_sigint();
 
         if (retval == -1) {
             if (errno == EINTR) {
@@ -471,7 +473,6 @@ runloop_start(void) {
     }
 
     alarm(0);
-    runloop_remove_signal_handlers();
     runloop_unblock_sigint();
 
     free(masked_signals);
