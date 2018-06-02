@@ -16,6 +16,8 @@ static void
 test_init_handler(UNUSED VSERIAL *vserial) {
     char *context = util_strdup("This is something in the context\n");
     vserial_set_context(vserial, context);
+    vserial_enable_recv(vserial);
+    vserial_enable_send(vserial);
 }
 
 static void
@@ -44,6 +46,20 @@ test_recv_data_handler(UNUSED VSERIAL *vserial, UNUSED uint8_t *buf, size_t len)
     free(text);
 }
 
+static void
+test_send_data_handler(UNUSED VSERIAL *vserial) {
+    static bool sent = 0;
+    printf("inside test_send_data_handler\n");
+
+    if (sent) {
+        vserial_disable_send(vserial);
+    } else {
+        char *message = "Well this is something\n";
+        vserial_send(vserial, message, strlen(message));
+        sent = 1;
+    }
+}
+
 struct driver_info *
 test_driver_info(void) {
     struct driver_info *info = util_malloc(sizeof(struct driver_info));
@@ -52,6 +68,7 @@ test_driver_info(void) {
     info->cleanup = test_cleanup_handler;
     info->vserial.control_line = test_control_line_handler;
     info->vserial.recv_data = test_recv_data_handler;
+    info->vserial.send_ready = test_send_data_handler;
 
     return info;
 }

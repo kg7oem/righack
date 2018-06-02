@@ -25,14 +25,13 @@ main(int argc, char **argv) {
     VSERIAL *test = vserial_create(name);
 
     printf("Fake serial device name: %s\n", vserial_get_name(test));
+    runloop_add_vserial(test);
 
     vserial_set_handlers(test, &test_driver->vserial);
 
     if (test_driver->init != NULL) {
         test_driver->init(test);
     }
-
-    runloop_add_vserial(test);
 
     printf("We are good: starting runloop\n");
 

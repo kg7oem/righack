@@ -125,6 +125,27 @@ vserial_set_context(VSERIAL *vserial, void *p) {
     vserial->handler_context = p;
 }
 
+bool
+vserial_enable_recv(VSERIAL *vserial) {
+    return runloop_enable_read(vserial->pty_master.fd);
+}
+
+bool
+vserial_disable_recv(VSERIAL *vserial) {
+    return runloop_disable_read(vserial->pty_master.fd);
+}
+
+bool
+vserial_enable_send(VSERIAL *vserial) {
+    return runloop_enable_write(vserial->pty_master.fd);
+}
+
+bool
+vserial_disable_send(VSERIAL *vserial) {
+    return runloop_disable_write(vserial->pty_master.fd);
+}
+
+
 void
 vserial_call_control_line_handler(VSERIAL *vserial) {
     int slave_fd = vserial->pty_slave.fd;
@@ -152,6 +173,14 @@ vserial_call_control_line_handler(VSERIAL *vserial) {
 }
 
 void
+vserial_call_send_ready_handler(VSERIAL *vserial) {
+    if (vserial->handlers.send_ready == NULL) {
+        return;
+    }
+
+    vserial->handlers.send_ready(vserial);
+}
+void
 vserial_call_recv_data_handler(VSERIAL *vserial, uint8_t *buf, size_t len) {
     if (vserial->handlers.recv_data == NULL) {
         return;
@@ -160,4 +189,18 @@ vserial_call_recv_data_handler(VSERIAL *vserial, uint8_t *buf, size_t len) {
     vserial->handlers.recv_data(vserial, buf, len);
 
     return;
+}
+
+//FIXME should this only work from inside a send_ready handler?
+void
+vserial_send(VSERIAL *vserial, void *buf, size_t len) {
+    if (vserial->send_buffer != NULL) {
+        util_fatal("attempt to call vserial_send() when send_buffer was not empty");
+    }
+
+    vserial->send_buffer = util_malloc(len);
+    memcpy(vserial->send_buffer, buf, len);
+    vserial->send_buffer_size = len;
+
+    runloop_enable_write(vserial->pty_master.fd);
 }

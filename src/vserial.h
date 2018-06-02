@@ -13,6 +13,8 @@
 // FIXME for size_t
 #include <stdlib.h>
 
+#include "runloop.h"
+
 // VSERIAL * is supposed to be an opaque handle and the vserial interface
 // isn't tied to POSIX so this could in theory work on Windows
 struct vserial_t;
@@ -43,5 +45,13 @@ void vserial_copy_handlers(VSERIAL *, struct vserial_handlers *);
 void vserial_set_handlers(VSERIAL *, struct vserial_handlers *);
 void * vserial_get_context(VSERIAL *);
 void vserial_set_context(VSERIAL *, void *);
+
+bool vserial_enable_recv(VSERIAL *);
+bool vserial_disable_recv(VSERIAL *);
+bool vserial_enable_send(VSERIAL *);
+bool vserial_disable_send(VSERIAL *);
+
+void
+vserial_send(VSERIAL *, void *, size_t);
 
 #endif /* SRC_VSERIAL_H_ */

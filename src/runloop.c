@@ -24,7 +24,7 @@
 #define TIOCPKT_MSET (1 << 7)
 
 // true if the runloop should be running
-bool should_run = false;
+volatile bool should_run = false;
 
 struct {
     // number of fds in watched
@@ -90,7 +90,6 @@ runloop_create_watched(void) {
             // POLLPRI events will be generated with the termios
             // information changes on the slave pty
             poll_entry->events |= POLLPRI;
-            poll_entry->events |= POLLIN;
 
             printf("new poll_entry events: %d\n", poll_entry->events);
             fd_slot++;
@@ -222,6 +221,110 @@ runloop_remove_signal_handlers(void) {
     }
 }
 
+bool
+runloop_enable_read(int enable_fd) {
+    struct pollfd *watched = watched_descriptors.watched;
+    int nfds = watched_descriptors.num_fd;
+    bool found_it = false;
+    bool old_value;
+
+    for (int i = 0; i < nfds; i++) {
+        struct pollfd *poll_entry = &watched[i];
+        int watched_fd = poll_entry->fd;
+
+        if (watched_fd == enable_fd) {
+            found_it = 1;
+            old_value = poll_entry->events & POLLIN;
+            poll_entry->events |= POLLIN;
+            break;
+        }
+    }
+
+    if (! found_it) {
+        util_fatal("Could not find fd %d in watched_descriptors", enable_fd);
+    }
+
+    return old_value;
+}
+
+bool
+runloop_disable_read(int disable_fd) {
+    struct pollfd *watched = watched_descriptors.watched;
+    int nfds = watched_descriptors.num_fd;
+    bool found_it = false;
+    bool old_value;
+
+    for (int i = 0; i < nfds; i++) {
+        struct pollfd *poll_entry = &watched[i];
+        int watched_fd = poll_entry->fd;
+
+        if (watched_fd == disable_fd) {
+            found_it = 1;
+            old_value = poll_entry->events & POLLIN;
+            poll_entry->events &= ~POLLIN;
+            break;
+        }
+    }
+
+    if (! found_it) {
+        util_fatal("Could not find fd %d in watched_descriptors", disable_fd);
+    }
+
+    return old_value;
+}
+
+bool
+runloop_disable_write(int disable_fd) {
+    struct pollfd *watched = watched_descriptors.watched;
+    int nfds = watched_descriptors.num_fd;
+    bool found_it = false;
+    bool old_value;
+
+    for (int i = 0; i < nfds; i++) {
+        struct pollfd *poll_entry = &watched[i];
+        int watched_fd = poll_entry->fd;
+
+        if (watched_fd == disable_fd) {
+            found_it = 1;
+            old_value = poll_entry->events & POLLOUT;
+            poll_entry->events &= ~POLLOUT;
+            break;
+        }
+    }
+
+    if (! found_it) {
+        util_fatal("Could not find fd %d in watched_descriptors", disable_fd);
+    }
+
+    return old_value;
+}
+
+bool
+runloop_enable_write(int enable_fd) {
+    struct pollfd *watched = watched_descriptors.watched;
+    int nfds = watched_descriptors.num_fd;
+    bool found_it = false;
+    bool old_value;
+
+    for (int i = 0; i < nfds; i++) {
+        struct pollfd *poll_entry = &watched[i];
+        int watched_fd = poll_entry->fd;
+
+        if (watched_fd == enable_fd) {
+            found_it = 1;
+            old_value = poll_entry->events & POLLOUT;
+            poll_entry->events |= POLLOUT;
+            break;
+        }
+    }
+
+    if (! found_it) {
+        util_fatal("Could not find fd %d in watched_descriptors", enable_fd);
+    }
+
+    return old_value;
+}
+
 // FIXME some of this logic should be moved to vserial.c
 int
 runloop_start(void) {
@@ -231,8 +334,8 @@ runloop_start(void) {
 
     should_run = 1;
 
-    runloop_block_sigint();
-    runloop_install_signal_handlers();
+//    runloop_block_sigint();
+//    runloop_install_signal_handlers();
 
     while(1) {
         printf("About to call poll(*, %d, -1); should_run: %i\n", nfds, should_run);
@@ -263,7 +366,7 @@ runloop_start(void) {
                 util_fatal("Got POLLERR\n");
             }
 
-            if (revents & POLLIN) {
+            if (revents & (POLLOUT | POLLIN | POLLPRI)) {
                 int fd = watched[i].fd;
                 VSERIAL *vserial = runloop_get_vserial_by_fd(fd);
                 uint8_t tmp[1024];
@@ -272,35 +375,77 @@ runloop_start(void) {
                     util_fatal("Could not find VSERIAL for fd %d", fd);
                 }
 
-                printf("got POLLIN\n");
-                ssize_t retval = read(fd, tmp, 1024);
-                if (retval == -1) {
-                    util_fatal_perror("Could not read from fd:");
+                if (revents & POLLOUT) {
+                    printf("Got POLLOUT\n");
+                    if (vserial->send_buffer == NULL) {
+                        // tell the driver that it can add
+                        // some data to the send buffer
+                        vserial_call_send_ready_handler(vserial);
+                    }
+
+                    if (vserial->send_buffer != NULL) {
+                        size_t write_size;
+
+                        if (vserial->send_buffer_size > 1024) {
+                            write_size = 1024;
+                        } else {
+                            write_size = vserial->send_buffer_size;
+                        }
+
+                        ssize_t retval = write(fd, vserial->send_buffer, write_size);
+
+                        if (retval == -1) {
+                            util_fatal_perror("Could not write(): ");
+                        }
+
+                        printf("Wrote %ld bytes; send_buffer_size = %ld\n", retval, vserial->send_buffer_size);
+                        vserial->send_buffer_size -= retval;
+                        printf("New send_buffer_size: %ld\n", vserial->send_buffer_size);
+
+                        if (vserial->send_buffer_size < 0) {
+                            util_fatal("send_buffer_size < 0: %d", vserial->send_buffer_size);
+                        }
+
+                        if (vserial->send_buffer_size == 0) {
+                            free(vserial->send_buffer);
+                            vserial->send_buffer = NULL;
+                        } else {
+                            vserial->send_buffer += retval;
+                        }
+                    }
                 }
 
-                printf("Read %ld bytes\n", retval);
-
-                if (retval >= 1) {
-                    uint8_t packet_type = tmp[0];
-
-                    if (packet_type == TIOCPKT_DATA) {
-                        // only send the data, skip the status byte
-                        vserial_call_recv_data_handler(vserial, tmp + 1, retval - 1);
-                    } else {
-                        printf("Packet type: %u\n", packet_type);
+                if (revents & (POLLIN | POLLPRI)) {
+                    printf("got POLLIN\n");
+                    ssize_t retval = read(fd, tmp, 1024);
+                    if (retval == -1) {
+                        util_fatal_perror("Could not read from fd:");
                     }
 
-                    // FIXME move to a handler implemented in vserial.c that
-                    // takes a VSERIAL *
-                    if (packet_type & TIOCPKT_IOCTL) {
-                        printf("should call a speed handler but can't\n");
-                    }
+                    printf("Read %ld bytes\n", retval);
 
-                    // FIXME move to a handler implemented in vserial.c that
-                    // takes a VSERIAL *
-                    if (packet_type & TIOCPKT_MSET) {
-                        printf("Calling control line handler\n");
-                        vserial_call_control_line_handler(vserial);
+                    if (retval >= 1) {
+                        uint8_t packet_type = tmp[0];
+
+                        if (packet_type == TIOCPKT_DATA) {
+                            // only send the data, skip the status byte
+                            vserial_call_recv_data_handler(vserial, tmp + 1, retval - 1);
+                        } else {
+                            printf("Packet type: %u\n", packet_type);
+                        }
+
+                        // FIXME move to a handler implemented in vserial.c that
+                        // takes a VSERIAL *
+                        if (packet_type & TIOCPKT_IOCTL) {
+                            printf("should call a speed handler but can't\n");
+                        }
+
+                        // FIXME move to a handler implemented in vserial.c that
+                        // takes a VSERIAL *
+                        if (packet_type & TIOCPKT_MSET) {
+                            printf("Calling control line handler\n");
+                            vserial_call_control_line_handler(vserial);
+                        }
                     }
                 }
             }
