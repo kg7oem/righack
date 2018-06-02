@@ -24,9 +24,11 @@
 
 // FIXME is there a better include for this?
 #include <linux/types.h>
+#include <pthread.h>
 #include <stdarg.h>
 
 #define UNUSED __attribute__((unused))
+#define TLOCAL __thread
 
 void * util_malloc(size_t);
 void * util_memdup(void *, size_t);

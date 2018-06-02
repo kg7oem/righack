@@ -19,6 +19,7 @@
  *
  */
 
+#include <hamlib/rig.h>
 #include <stdio.h>
 
 #include "../driver.h"

@@ -21,6 +21,7 @@
 
 #include <stdbool.h>
 #include <stdio.h>
+#include <stdlib.h>
 
 #include "configfile.h"
 #include "external/toml.h"
@@ -104,6 +105,7 @@ configfile_get_vserial_num(int num) {
 
 const char *
 configfile_get_vserial_name(int num) {
+    static TLOCAL char *name = NULL;
     configfile_guard();
 
     toml_table_t *table = configfile_get_vserial_num(num);
@@ -113,7 +115,10 @@ configfile_get_vserial_name(int num) {
         util_fatal("Could not get name from vserial config #%d\n", num);
     }
 
-    char *name;
+    if (name) {
+        free(name);
+    }
+
     toml_rtos(raw, &name);
 
     return name;
@@ -121,6 +126,7 @@ configfile_get_vserial_name(int num) {
 
 const char *
 configfile_get_vserial_driver(int num) {
+    static TLOCAL char *driver = NULL;
     configfile_guard();
 
     toml_table_t *table = configfile_get_vserial_num(num);
@@ -130,7 +136,10 @@ configfile_get_vserial_driver(int num) {
         util_fatal("could not get driver from vserial config #%d\n", num);
     }
 
-    char *driver;
+    if (driver != NULL) {
+        free(driver);
+    }
+
     toml_rtos(raw, &driver);
 
     return driver;
