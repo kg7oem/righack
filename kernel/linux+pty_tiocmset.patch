@@ -1,0 +1,75 @@
+diff --git a/drivers/tty/pty.c b/drivers/tty/pty.c
+index 6c7151e..4903138 100644
+--- a/drivers/tty/pty.c
++++ b/drivers/tty/pty.c
+@@ -361,6 +361,34 @@ static void pty_stop(struct tty_struct *tty)
+ 	}
+ }
+ 
++/* KG7OEM */
++static int pts_tiocmget(struct tty_struct *tty)
++{
++	int retval;
++
++	spin_lock_irq(&tty->ctrl_lock);
++	retval = tty->fake_mbits;
++	spin_unlock_irq(&tty->ctrl_lock);
++	return retval;
++}
++
++static int pts_tiocmset(struct tty_struct *tty, unsigned int set, unsigned int clear)
++{
++	struct tty_struct *master = tty->link;
++
++	spin_lock_irq(&tty->ctrl_lock);
++	tty->fake_mbits |= set;
++	tty->fake_mbits &= ~clear;
++	spin_unlock_irq(&tty->ctrl_lock);
++
++	if (master->packet) {
++		tty->ctrl_status |= TIOCPKT_MSET;
++		wake_up_interruptible(&master->read_wait);
++	}
++
++	return 0;
++}
++
+ /**
+  *	pty_common_install		-	set up the pty pair
+  *	@driver: the pty driver
+@@ -781,6 +809,9 @@ static const struct tty_operations pty_unix98_ops = {
+ 	.start = pty_start,
+ 	.stop = pty_stop,
+ 	.cleanup = pty_cleanup,
++	/* KG7OEM */
++	.tiocmget = pts_tiocmget,
++	.tiocmset = pts_tiocmset,
+ };
+ 
+ /**
+diff --git a/include/linux/tty.h b/include/linux/tty.h
+index 1dd587ba..d194046 100644
+--- a/include/linux/tty.h
++++ b/include/linux/tty.h
+@@ -335,6 +335,8 @@ struct tty_struct {
+ 	/* If the tty has a pending do_SAK, queue it here - akpm */
+ 	struct work_struct SAK_work;
+ 	struct tty_port *port;
++	/* KG7OEM */
++	unsigned int fake_mbits;
+ } __randomize_layout;
+ 
+ /* Each of a tty's open files has private_data pointing to tty_file_private */
+diff --git a/include/uapi/asm-generic/ioctls.h b/include/uapi/asm-generic/ioctls.h
+index 0406517..78ed444 100644
+--- a/include/uapi/asm-generic/ioctls.h
++++ b/include/uapi/asm-generic/ioctls.h
+@@ -113,6 +113,8 @@
+ #define TIOCPKT_NOSTOP		16
+ #define TIOCPKT_DOSTOP		32
+ #define TIOCPKT_IOCTL		64
++/* KG7OEM */
++#define TIOCPKT_MSET		128
+ 
+ #define TIOCSER_TEMT	0x01	/* Transmitter physically empty */
+ 
