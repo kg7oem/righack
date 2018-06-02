@@ -14,7 +14,7 @@
 
 static void
 test_init_handler(UNUSED VSERIAL *vserial) {
-    char *context = strdup("This is something in the context\n");
+    char *context = util_strdup("This is something in the context\n");
     vserial_set_context(vserial, context);
 }
 

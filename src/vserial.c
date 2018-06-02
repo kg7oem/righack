@@ -88,13 +88,8 @@ vserial_create(char *name_arg) {
         util_fatal("length of slave_path(%d) >= PATH_MAX(%d)\n", strlen(slave_path), PATH_MAX);
     }
 
-    if ((p->name = strndup(name, PATH_MAX)) == NULL) {
-        util_fatal("strndup() returned NULL\n");
-    }
-
-    if ((p->pty_slave.path = strndup(slave_path, PATH_MAX)) == NULL) {
-        util_fatal("strndup() returned NULL\n");
-    }
+    p->name = util_strndup(name, PATH_MAX);
+    p->pty_slave.path = util_strndup(slave_path, PATH_MAX);
 
     if (name_arg != NULL) {
         fprintf(stderr, "Would symlink %s to %s\n", p->name, p->pty_slave.path);

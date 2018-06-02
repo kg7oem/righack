@@ -52,3 +52,25 @@ util_fatal_perror(char *fmt, ...) {
     perror("");
     abort();
 }
+
+char *
+util_strndup(const char *s, size_t n) {
+    char *string = strndup(s, n);
+
+    if (string == NULL) {
+        util_fatal_perror("Could not strndup(): ");
+    }
+
+    return string;
+}
+
+char *
+util_strdup(const char *s) {
+    char *string = strdup(s);
+
+    if (string == NULL) {
+        util_fatal_perror("Could not strdup(): ");
+    }
+
+    return string;
+}
