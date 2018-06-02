@@ -1,5 +1,5 @@
 /*
- * drivers.h
+ * ptt.h
  *
  *  Created on: Jun 2, 2018
  *      Author: tyler
@@ -19,10 +19,11 @@
  *
  */
 
-#ifndef DRIVERS_H_
-#define DRIVERS_H_
+#ifndef SRC_DRIVERS_PTT_H_
+#define SRC_DRIVERS_PTT_H_
 
-#include "drivers/test.h"
-#include "drivers/ptt.h"
+#include "../driver.h"
 
-#endif /* DRIVERS_H_ */
+struct driver_info * ptt_driver_info(void);
+
+#endif /* SRC_DRIVERS_PTT_H_ */

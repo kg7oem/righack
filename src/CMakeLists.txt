@@ -7,7 +7,7 @@ add_definitions(-Werror -Wall -Wextra)
 
 add_executable(righack
     main.c util.c vserial.c runloop.c config.c
-    drivers/test.c
+    drivers/test.c drivers/ptt.c
     external/toml.c
 )
 TARGET_LINK_LIBRARIES(righack util)

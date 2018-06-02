@@ -34,7 +34,7 @@
 int
 main(int argc, char **argv) {
     char *name = NULL;
-    struct driver_info *test_driver = test_driver_info();
+    struct driver_info *driver = ptt_driver_info();
 
     if (argc != 2) {
         util_fatal("specify only a path to a config file");
@@ -51,27 +51,27 @@ main(int argc, char **argv) {
         );
     }
 
-    VSERIAL *test = vserial_create(name);
+    VSERIAL *vserial = vserial_create(name);
 
-    printf("Fake serial device name: %s\n", vserial_get_name(test));
-    runloop_add_vserial(test);
+    printf("Fake serial device name: %s\n", vserial_get_name(vserial));
+    runloop_add_vserial(vserial);
 
-    vserial_set_handlers(test, &test_driver->vserial);
+    vserial_set_handlers(vserial, &driver->vserial);
 
-    if (test_driver->init != NULL) {
-        test_driver->init(test);
+    if (driver->init != NULL) {
+        driver->init(vserial);
     }
 
     printf("We are good: starting runloop\n");
 
     runloop_start();
 
-    if (test_driver->cleanup) {
-        test_driver->cleanup(test);
+    if (driver->cleanup) {
+        driver->cleanup(vserial);
     }
 
-    vserial_destroy(test);
-    free(test_driver);
+    vserial_destroy(vserial);
+    free(driver);
 
     exit(0);
 }

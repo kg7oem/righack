@@ -90,3 +90,10 @@ util_strdup(const char *s) {
 
     return string;
 }
+
+void *
+util_memdup(void *p, size_t len) {
+    void *ret = util_malloc(len);
+    memcpy(ret, p, len);
+    return ret;
+}

@@ -65,7 +65,7 @@ test_recv_data_handler(UNUSED VSERIAL *vserial, UNUSED uint8_t *buf, size_t len)
 static void
 test_send_data_handler(UNUSED VSERIAL *vserial) {
     static bool sent = 0;
-    printf("inside test_send_data_handler\n");
+    printf("  inside test_send_data_handler\n");
 
     if (sent) {
         vserial_disable_send(vserial);
