@@ -24,7 +24,7 @@
 #ifndef SRC_DRIVER_TEST_H_
 #define SRC_DRIVER_TEST_H_
 
-#include "driver.h"
+#include "../driver.h"
 
 struct driver_info * test_driver_info(void);
 

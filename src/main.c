@@ -26,7 +26,7 @@
 #include <string.h>
 
 #include "config.h"
-#include "driver.test.h"
+#include "drivers.h"
 #include "runloop.h"
 #include "util.h"
 #include "vserial.h"
@@ -50,8 +50,6 @@ main(int argc, char **argv) {
                 config_get_vserial_driver(i)
         );
     }
-
-    util_fatal("bailing");
 
     VSERIAL *test = vserial_create(name);
 

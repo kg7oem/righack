@@ -24,9 +24,9 @@
 #include <stdio.h>
 #include <string.h>
 
-#include "driver.test.h"
-#include "vserial.h"
-#include "util.h"
+#include "test.h"
+#include "../vserial.h"
+#include "../util.h"
 
 static void
 test_init_handler(UNUSED VSERIAL *vserial) {
