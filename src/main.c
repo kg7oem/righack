@@ -23,7 +23,7 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include "config.h"
+#include "configfile.h"
 #include "drivers.h"
 #include "runloop.h"
 #include "util.h"
@@ -38,14 +38,14 @@ main(int argc, char **argv) {
         util_fatal("specify only a path to a config file");
     }
 
-    config_load(argv[1]);
-    printf("vserial sections in config: %d\n", config_count_vserial());
+    configfile_load(argv[1]);
+    printf("vserial sections in config: %d\n", configfile_count_vserial());
 
-    for(int i = 0; i < config_count_vserial(); i++) {
+    for(int i = 0; i < configfile_count_vserial(); i++) {
         printf(
                 "  virtual serial port %s = %s\n",
-                config_get_vserial_name(i),
-                config_get_vserial_driver(i)
+                configfile_get_vserial_name(i),
+                configfile_get_vserial_driver(i)
         );
     }
 

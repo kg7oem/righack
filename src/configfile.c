@@ -1,5 +1,5 @@
 /*
- * config.c
+ * configfile.c
  *
  *  Created on: Jun 1, 2018
  *      Author: tyler
@@ -22,14 +22,14 @@
 #include <stdbool.h>
 #include <stdio.h>
 
-#include "config.h"
+#include "configfile.h"
 #include "external/toml.h"
 #include "util.h"
 
 toml_table_t* toml_root;
 
 void
-config_load(char *path) {
+configfile_load(char *path) {
     char error[1024];
     FILE *fh;
 
@@ -55,18 +55,18 @@ config_load(char *path) {
 }
 
 static void
-config_guard(void) {
+configfile_guard(void) {
     if (toml_root == NULL) {
         util_fatal("toml_root is NULL\n");
     }
 }
 
 int
-config_count_vserial(void) {
+configfile_count_vserial(void) {
     toml_array_t *vserials;
     int i;
 
-    config_guard();
+    configfile_guard();
 
     vserials = toml_array_in(toml_root, "vserial");
 
@@ -85,7 +85,7 @@ config_count_vserial(void) {
 }
 
 static toml_array_t *
-config_get_vserials(void) {
+configfile_get_vserials(void) {
     toml_array_t *vserials = toml_array_in(toml_root, "vserial");
     if (vserials == NULL) {
         util_fatal("Could not find a vserial section in config file");
@@ -94,8 +94,8 @@ config_get_vserials(void) {
 }
 
 static toml_table_t *
-config_get_vserial_num(int num) {
-    toml_table_t *table = toml_table_at(config_get_vserials(), num);
+configfile_get_vserial_num(int num) {
+    toml_table_t *table = toml_table_at(configfile_get_vserials(), num);
     if (table == NULL) {
         util_fatal("Could not get vserial config #%d", num);
     }
@@ -103,10 +103,10 @@ config_get_vserial_num(int num) {
 }
 
 const char *
-config_get_vserial_name(int num) {
-    config_guard();
+configfile_get_vserial_name(int num) {
+    configfile_guard();
 
-    toml_table_t *table = config_get_vserial_num(num);
+    toml_table_t *table = configfile_get_vserial_num(num);
     const char *raw = toml_raw_in(table, "name");
 
     if (raw == NULL) {
@@ -120,10 +120,10 @@ config_get_vserial_name(int num) {
 }
 
 const char *
-config_get_vserial_driver(int num) {
-    config_guard();
+configfile_get_vserial_driver(int num) {
+    configfile_guard();
 
-    toml_table_t *table = config_get_vserial_num(num);
+    toml_table_t *table = configfile_get_vserial_num(num);
     const char *raw = toml_raw_in(table, "driver");
 
     if (raw == NULL) {

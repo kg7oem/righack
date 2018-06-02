@@ -31,6 +31,8 @@
 #include <string.h>
 #include <sys/ioctl.h>
 #include <unistd.h>
+
+#include "config.h"
 #include "runloop.h"
 #include "util.h"
 #include "vserial-private.h"
@@ -345,6 +347,7 @@ runloop_start(void) {
     struct pollfd *watched = watched_descriptors.watched;
     int nfds = watched_descriptors.num_fd;
     sigset_t *masked_signals = runloop_create_empty_sigset();
+    uint8_t *read_buf = util_malloc(CONFIG_READ_SIZE);
 
     should_run = 1;
 
@@ -383,7 +386,6 @@ runloop_start(void) {
             if (revents & (POLLOUT | POLLIN | POLLPRI)) {
                 int fd = watched[i].fd;
                 VSERIAL *vserial = runloop_get_vserial_by_fd(fd);
-                uint8_t tmp[1024];
 
                 if (vserial == NULL) {
                     util_fatal("Could not find VSERIAL for fd %d", fd);
@@ -400,8 +402,8 @@ runloop_start(void) {
                     if (vserial->send_buffer != NULL) {
                         size_t write_size;
 
-                        if (vserial->send_buffer_size > 1024) {
-                            write_size = 1024;
+                        if (vserial->send_buffer_size > CONFIG_WRITE_SIZE) {
+                            write_size = CONFIG_WRITE_SIZE;
                         } else {
                             write_size = vserial->send_buffer_size;
                         }
@@ -431,7 +433,7 @@ runloop_start(void) {
 
                 if (revents & (POLLIN | POLLPRI)) {
                     printf("got POLLIN\n");
-                    ssize_t retval = read(fd, tmp, 1024);
+                    ssize_t retval = read(fd, read_buf, CONFIG_READ_SIZE);
                     if (retval == -1) {
                         util_fatal_perror("Could not read from fd:");
                     }
@@ -439,11 +441,11 @@ runloop_start(void) {
                     printf("Read %ld bytes\n", retval);
 
                     if (retval >= 1) {
-                        uint8_t packet_type = tmp[0];
+                        uint8_t packet_type = read_buf[0];
 
                         if (packet_type == TIOCPKT_DATA) {
                             // only send the data, skip the status byte
-                            vserial_call_recv_data_handler(vserial, tmp + 1, retval - 1);
+                            vserial_call_recv_data_handler(vserial, read_buf + 1, retval - 1);
                         } else {
                             printf("Packet type: %u\n", packet_type);
                         }
@@ -473,6 +475,7 @@ runloop_start(void) {
     runloop_unblock_sigint();
 
     free(masked_signals);
+    free(read_buf);
 
     return 0;
 }

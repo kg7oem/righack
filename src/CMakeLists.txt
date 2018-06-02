@@ -6,7 +6,7 @@ set(CMAKE_C_FLAGS "-std=gnu99")
 add_definitions(-Werror -Wall -Wextra)
 
 add_executable(righack
-    main.c util.c vserial.c runloop.c config.c
+    main.c util.c vserial.c runloop.c configfile.c
     drivers/test.c drivers/ptt.c
     external/toml.c
 )

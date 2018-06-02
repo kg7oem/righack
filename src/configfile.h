@@ -1,7 +1,7 @@
 /*
- * config.h
+ * configfile.h
  *
- *  Created on: Jun 2, 2018
+ *  Created on: Jun 1, 2018
  *      Author: tyler
  *
  * This program is free software: you can redistribute it and/or modify
@@ -22,9 +22,10 @@
 #ifndef SRC_CONFIG_H_
 #define SRC_CONFIG_H_
 
-#include <stdio.h>
+void configfile_load(char *);
 
-#define CONFIG_READ_SIZE BUFSIZ
-#define CONFIG_WRITE_SIZE BUFSIZ
+int configfile_count_vserial(void);
+const char * configfile_get_vserial_name(int);
+const char * configfile_get_vserial_driver(int);
 
 #endif /* SRC_CONFIG_H_ */
