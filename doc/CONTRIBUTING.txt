@@ -1,0 +1,59 @@
+Version: 1.0
+
+The righack software project is being created and managed by
+
+  Tyler Riddle KG7OEM <cardboardaardvark@gmail.com>
+
+(the "Author" ) and is the current Benevolant Dictator For Life (BDFL).
+Contributions from the public are welcome and encouraged but must adhere
+to the contributor agreement as specified in this document. Individuals
+that submit a patch for inclusion in this project are known as Contributors.
+
+The goal of this contributor agreement is to provide the author the required
+flexibility to manage this project in the future. Contributors agree that the
+Author or another individual appointed as benevolant dictator for life of the
+righack project can place the work of the Contributors under different license
+terms than the project had when the submission was provided.
+
+Specifically at the discretion of the Author or current BDFL the entire project
+may have the license terms changed with out limit including all work from all
+Contributors. Contributors acknowledge that they have no expectation of control
+over the licensing terms associated with the contributed work.
+
+
+HOW TO SUBMIT A PATCH
+
+If this is your first contribution to the righack project then your first patch
+must include a file that confirms you agree with the terms of the contributor
+agreement. Please include this file, as described below, along with the rest
+of the contents of your change in a single patch.
+
+Copy the contents of this file (CONTRIBUTING.txt) to contributors/<your email>
+and fill out your name and email address in the CONTRIBUTOR AGREEMENT section
+at the bottom. See the contributors/ directory for existing examples.
+
+
+WHY?
+
+I'm trying to solve a big problem before it crops up. I'm would like to be able
+to change opensource licenses in the future and not have to contact all of the
+Contributors to the project to do it. Ideally this agreement would place limits
+on what those future licenses might be but that turned out to be difficult to
+define well. Because I'm just one guy and I don't have a lot of time for
+administrative hassle I'm starting off keeping it simple.
+
+
+CONTRIBUTOR AGREEMENT
+
+I, [name and email address go here], (the "Contributor"),
+hereby agree that any work submitted by the Contributor and included in the
+righack project may have the license terms changed at any time and with out
+restriction at the sole discrition of the Author or current BDFL. Contributor
+acknowledges there is no expectation of control over the license terms
+associated with their submitted work.
+
+Contributor also acknowledges that the submitted work is their own creation or
+is suitably licensed, such as software that is in the public domain, for
+inclusion in this project and for any future license changes. Any third party
+software included as a part of a submission must include information related
+to the license used by the software.
