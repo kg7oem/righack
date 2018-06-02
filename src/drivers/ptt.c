@@ -21,23 +21,74 @@
 
 #include <hamlib/rig.h>
 #include <stdio.h>
+#include <string.h>
 
 #include "../driver.h"
 #include "../util.h"
 
+struct ptt_context {
+    RIG *rig;
+};
+
 static void
 ptt_init_handler(UNUSED VSERIAL *vserial) {
+    struct ptt_context *context = util_malloc(sizeof(struct ptt_context));
+    rig_model_t rigid = 378; // IC-7610
+    char *device = "/dev/ttyUSB0";
+    ptt_t ptt_state;
+    int ret;
+
     printf("  Inside ptt_init_handler\n");
+
+    RIG *rig = rig_init(rigid);
+    if (! rig) {
+        util_fatal("could not rig_init(%d)\n", rigid);
+    }
+
+    strncpy(rig->state.rigport.pathname,device,FILPATHLEN - 1);
+
+    ret = rig_open(rig);
+    if (ret != RIG_OK) {
+        util_fatal("Could not rig_open(): %s\n", rigerror(ret));
+    }
+
+    printf("Opened rig!\n");
+
+    ret = rig_get_ptt(rig, RIG_VFO_CURR, &ptt_state);
+    if (ret != RIG_OK) {
+        util_fatal("could not get PTT state: %s\n", rigerror(ret));
+    }
+
+    context->rig = rig;
+
+    vserial_set_context(vserial, context);
 }
 
 static void
 ptt_cleanup_handler(UNUSED VSERIAL *vserial) {
+    struct ptt_context *context = vserial_get_context(vserial);
     printf("  Inside ptt_cleanup_handler\n");
+
+    rig_close(context->rig);
+    rig_cleanup(context->rig);
+    free(context);
 }
 
 static void
 ptt_control_line_handler(UNUSED VSERIAL *vserial, UNUSED struct vserial_control_line *control_line) {
+    struct ptt_context *context = vserial_get_context(vserial);
     printf("  Inside ptt_control_line_handler\n");
+    ptt_t ptt_state = RIG_PTT_OFF;
+    int ret;
+
+    if (control_line->rts) {
+        ptt_state = RIG_PTT_ON;
+    }
+
+    ret = rig_set_ptt(context->rig, RIG_VFO_CURR, ptt_state);
+    if (ret != RIG_OK) {
+        util_fatal("Could not set transmit: %s\n", rigerror(ret));
+    }
 }
 
 struct driver_info *

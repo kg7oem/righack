@@ -12,3 +12,4 @@ add_executable(righack
 )
 TARGET_LINK_LIBRARIES(righack util)
 TARGET_LINK_LIBRARIES(righack pthread)
+TARGET_LINK_LIBRARIES(righack hamlib)
