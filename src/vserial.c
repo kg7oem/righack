@@ -155,3 +155,14 @@ vserial_call_control_line_handler(VSERIAL *vserial) {
 
     return;
 }
+
+void
+vserial_call_recv_data_handler(VSERIAL *vserial, uint8_t *buf, size_t len) {
+    if (vserial->handlers.recv_data == NULL) {
+        return;
+    }
+
+    vserial->handlers.recv_data(vserial, buf, len);
+
+    return;
+}

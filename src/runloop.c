@@ -21,6 +21,8 @@
 #include "util.h"
 #include "vserial-private.h"
 
+#define TIOCPKT_MSET (1 << 7)
+
 // true if the runloop should be running
 bool should_run = false;
 
@@ -124,20 +126,19 @@ runloop_add_vserial(VSERIAL *vserial) {
     printf("Number of things in vserial_lookup: %d\n", runloop_count_vserial());
 }
 
-void
-runloop_call_control_line_handler(int fd) {
+VSERIAL *
+runloop_get_vserial_by_fd(int fd) {
     VSERIAL *vserial = watched_descriptors.vserial_lookup[fd];
 
     if (vserial == NULL) {
-        util_fatal("Could not find a vserial entry for fd %d\n", fd);
+        return NULL;
     }
 
     if (vserial->pty_master.fd != fd) {
         util_fatal("Got fd %d from vserial_lookup with key of %d\n", vserial->pty_master.fd, fd);
     }
 
-    vserial_call_control_line_handler(vserial);
-    return;
+    return vserial;
 }
 
 sigset_t *
@@ -221,6 +222,7 @@ runloop_remove_signal_handlers(void) {
     }
 }
 
+// FIXME some of this logic should be moved to vserial.c
 int
 runloop_start(void) {
     struct pollfd *watched = watched_descriptors.watched;
@@ -262,9 +264,16 @@ runloop_start(void) {
             }
 
             if (revents & POLLIN) {
+                int fd = watched[i].fd;
+                VSERIAL *vserial = runloop_get_vserial_by_fd(fd);
                 uint8_t tmp[1024];
+
+                if (vserial == NULL) {
+                    util_fatal("Could not find VSERIAL for fd %d", fd);
+                }
+
                 printf("got POLLIN\n");
-                ssize_t retval = read(watched[i].fd, tmp, 1024);
+                ssize_t retval = read(fd, tmp, 1024);
                 if (retval == -1) {
                     util_fatal_perror("Could not read from fd:");
                 }
@@ -275,18 +284,29 @@ runloop_start(void) {
                     uint8_t packet_type = tmp[0];
 
                     if (packet_type == TIOCPKT_DATA) {
-                        printf("Got a data packet\n");
+                        // only send the data, skip the status byte
+                        vserial_call_recv_data_handler(vserial, tmp + 1, retval - 1);
                     } else {
                         printf("Packet type: %u\n", packet_type);
                     }
 
-                    if (packet_type & 128) {
-                        printf("Calling control line handler\n\n");
-                        runloop_call_control_line_handler(watched[i].fd);
+                    // FIXME move to a handler implemented in vserial.c that
+                    // takes a VSERIAL *
+                    if (packet_type & TIOCPKT_IOCTL) {
+                        printf("should call a speed handler but can't\n");
+                    }
+
+                    // FIXME move to a handler implemented in vserial.c that
+                    // takes a VSERIAL *
+                    if (packet_type & TIOCPKT_MSET) {
+                        printf("Calling control line handler\n");
+                        vserial_call_control_line_handler(vserial);
                     }
                 }
             }
         }
+
+        printf("\n");
     }
 
     alarm(0);

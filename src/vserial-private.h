@@ -25,5 +25,6 @@ struct vserial_t {
 };
 
 void vserial_call_control_line_handler(VSERIAL *);
+void vserial_call_recv_data_handler(VSERIAL *, uint8_t *, size_t);
 
 #endif /* SRC_VSERIAL_PRIVATE_H_ */

@@ -8,6 +8,7 @@
 #ifndef SRC_VSERIAL_H_
 #define SRC_VSERIAL_H_
 
+#include <inttypes.h>
 #include <stdbool.h>
 // FIXME for size_t
 #include <stdlib.h>
@@ -25,7 +26,7 @@ struct vserial_control_line {
 };
 
 typedef void (*vserial_control_line_handler)(VSERIAL *, struct vserial_control_line *);
-typedef void (*vserial_recv_data_handler)(VSERIAL *, char *, size_t);
+typedef void (*vserial_recv_data_handler)(VSERIAL *, uint8_t *, size_t);
 typedef void (*vserial_send_ready_handler)(VSERIAL *);
 
 struct vserial_handlers {
