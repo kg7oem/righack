@@ -44,7 +44,11 @@ main(int argc, char **argv) {
     printf("vserial sections in config: %d\n", config_count_vserial());
 
     for(int i = 0; i < config_count_vserial(); i++) {
-        printf("  virtual serial port: %s\n", config_get_vserial_name(i));
+        printf(
+                "  virtual serial port %s = %s\n",
+                config_get_vserial_name(i),
+                config_get_vserial_driver(i)
+        );
     }
 
     util_fatal("bailing");

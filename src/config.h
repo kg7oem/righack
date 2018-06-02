@@ -28,5 +28,6 @@ void config_load(char *);
 
 int config_count_vserial(void);
 const char * config_get_vserial_name(int);
+const char * config_get_vserial_driver(int);
 
 #endif /* SRC_CONFIG_H_ */

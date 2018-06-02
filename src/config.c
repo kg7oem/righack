@@ -86,24 +86,54 @@ config_count_vserial(void) {
     return i;
 }
 
-const char *
-config_get_vserial_name(int num) {
-    config_guard();
-
+static toml_array_t *
+config_get_vserials(void) {
     toml_array_t *vserials = toml_array_in(toml_root, "vserial");
     if (vserials == NULL) {
         util_fatal("Could not find a vserial section in config file");
     }
+    return vserials;
+}
 
-    toml_table_t *table = toml_table_at(vserials, num);
+static toml_table_t *
+config_get_vserial_num(int num) {
+    toml_table_t *table = toml_table_at(config_get_vserials(), num);
     if (table == NULL) {
         util_fatal("Could not get vserial config #%d", num);
     }
+    return table;
+}
 
-    const char *name = toml_raw_in(table, "name");
-    if (name == NULL) {
+const char *
+config_get_vserial_name(int num) {
+    config_guard();
+
+    toml_table_t *table = config_get_vserial_num(num);
+    const char *raw = toml_raw_in(table, "name");
+
+    if (raw == NULL) {
         util_fatal("Could not get name from vserial config #%d\n", num);
     }
 
+    char *name;
+    toml_rtos(raw, &name);
+
     return name;
+}
+
+const char *
+config_get_vserial_driver(int num) {
+    config_guard();
+
+    toml_table_t *table = config_get_vserial_num(num);
+    const char *raw = toml_raw_in(table, "driver");
+
+    if (raw == NULL) {
+        util_fatal("could not get driver from vserial config #%d\n", num);
+    }
+
+    char *driver;
+    toml_rtos(raw, &driver);
+
+    return driver;
 }
