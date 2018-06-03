@@ -45,7 +45,7 @@ autodie_handler(const char *function, int error, const char *message) {
         guts_exit(exit_nomem);
     }
 
-    log_fatal("%s() died \"%s\": %s", function, message, strerror(error));
+    util_fatal("%s() died \"%s\": %s", function, message, strerror(error));
 }
 
 
@@ -58,10 +58,12 @@ int
 main(int argc, char **argv) {
     bootstrap();
 
-    log_trace("main just started");
+    log_info("main just started");
+
+    util_fatal("The Cheat is GROUNDED! Because of: %s", "reasons");
 
     if (argc != 2) {
-        log_fatal_ret("Usage: specify exactly one config file as an argument");
+        log_fatal("Usage: specify exactly one config file as an argument");
         guts_exit(exit_args);
     }
 
@@ -79,12 +81,12 @@ main(int argc, char **argv) {
 
     p = configfile_rgets_section_key(section_name, "driver.type");
     if (strcmp(p, "ptt")) {
-        log_fatal("only the ptt driver type is supported, not '%s'\n", p);
+        util_fatal("only the ptt driver type is supported, not '%s'\n", p);
     }
 
     p = configfile_rgets_section_key(section_name, "io.type");
     if (strcmp(p, "vserial")) {
-        log_fatal("only the vserial io type is supported, not '%s'\n", p);
+        util_fatal("only the vserial io type is supported, not '%s'\n", p);
     }
 
     const char *name = configfile_gets_section_key(section_name, "io.port");

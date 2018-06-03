@@ -57,6 +57,22 @@ log_levelname(enum log_level level) {
     abort();
 }
 
+const char *
+log_sourcename(enum log_source source) {
+    switch(source) {
+    case log_source_unknown:
+        return "unknown";
+    case log_source_righack:
+        return "righack";
+    case log_source_hamlib:
+        return "hamlib";
+    }
+
+    // control should never get here and if it does a core
+    // would be nice to have
+    abort();
+}
+
 static const char *
 log_basename(const char *path) {
     const char *filename = path;
@@ -69,67 +85,46 @@ log_basename(const char *path) {
     return filename;
 }
 
-// FIXME figure out how to get the common parts of the log__level* functions
-// into their own functions
-void
-log__level(UNUSED enum log_level level, const char *function, const char *path, int line, const char *fmt, ...) {
+void log__level_args(enum log_source source, UNUSED enum log_level level, const char *function, const char *path, int line, const char *fmt, va_list args) {
+    static TLOCAL char *message_buf = NULL;
+
     if (level < current_level) {
         return;
     }
 
-    const char *file = log_basename(path);
-    static TLOCAL char *message_buf = NULL;
-    const char *level_name = log_levelname(level);
-    va_list args;
-
-    if (message_buf == NULL) {
-        // don't use the project memory management
-        // to avoid bootstrap issues
-        message_buf = malloc(CONFIG_LOG_SIZE);
-        if (message_buf == NULL) {
-            perror("could not malloc: ");
-            guts_exit(exit_nomem);
-        }
-    }
-
-    va_start(args, fmt);
-    // FIXME detect when the message does not fit
-    vsnprintf(message_buf, CONFIG_LOG_SIZE, fmt, args);
-    va_end(args);
-
     FILE *output = stdout;
-    if (level >= log_level_warn) {
-        output = stderr;
-    }
-
-    fprintf(output, "%s %s:%d %s() %s\n", level_name, file, line, function, message_buf);
-}
-
-void
-log__level_exit(UNUSED enum log_level level, const char *function, const char *path, int line, const char *fmt, ...) {
-    static TLOCAL char *message_buf = NULL;
-    FILE *output = stdout;
-    va_list args;
 
     if (message_buf == NULL) {
         message_buf = ad_malloc(CONFIG_LOG_SIZE);
     }
 
-    if (level >= current_level) {
-        const char *file = log_basename(path);
-        const char *level_name = log_levelname(level);
-
-        va_start(args, fmt);
-        // FIXME detect when the message does not fit
-        vsnprintf(message_buf, CONFIG_LOG_SIZE, fmt, args);
-        va_end(args);
-
-        if (level >= log_level_warn) {
-            output = stderr;
-        }
-
-        fprintf(output, "%s %s:%d %s() %s\n", level_name, file, line, function, message_buf);
+    if (level >= log_level_warn) {
+        output = stderr;
     }
 
-    guts_exit(exit_fatal);
+    const char *file = log_basename(path);
+    const char *level_name = log_levelname(level);
+    const char *source_name = log_sourcename(source);
+
+    // FIXME detect when the message does not fit
+    vsnprintf(message_buf, CONFIG_LOG_SIZE, fmt, args);
+    // FIXME detect errors on fprintf too
+    fprintf(output, "%s %s %s:%d %s() %s\n", source_name, level_name, file, line, function, message_buf);
+}
+
+// FIXME figure out how to get the common parts of the log__level* functions
+// into their own functions
+void
+log__level_va(enum log_source source, enum log_level level, const char *function, const char *path, int line, const char *fmt, ...) {
+    if (level < current_level) {
+        return;
+    }
+
+    va_list args, copy;
+
+    va_start(args, fmt);
+    va_copy(copy, args);
+    va_end(args);
+
+    log__level_args(source, level, function, path, line, fmt, args);
 }

@@ -43,7 +43,7 @@ static void vserial_manage_symlink(const char *, const char *);
 void
 vserial_destroy(VSERIAL *p) {
     if (p == NULL) {
-        log_fatal("attempt to vserial_destroy() a null pointer\n");
+        util_fatal("attempt to vserial_destroy() a null pointer\n");
     }
 
     if (p->pty_master.path != NULL) {
@@ -74,17 +74,17 @@ vserial_create(const char *name_arg) {
     int nonzero = 1;
 
     if (openpty(master, slave, slave_path, NULL, NULL)) {
-        log_fatal("could not openpty(): %m");
+        util_fatal("could not openpty(): %m");
     }
 
     // packet mode enables delivery of status information
     // about the slave to the master
     if(ioctl(*master, TIOCPKT, &nonzero) == -1) {
-        log_fatal("could not ioctl(): %m");
+        util_fatal("could not ioctl(): %m");
     }
 
     if (tcgetattr(*master, master_terminfo)) {
-        log_fatal("could not tcgettr(): %m");
+        util_fatal("could not tcgettr(): %m");
     }
 
     // EXTPROC causes an event whenever tcsetattr() is called
@@ -92,7 +92,7 @@ vserial_create(const char *name_arg) {
     master_terminfo->c_lflag |= EXTPROC;
 
     if (tcsetattr(*master, TCSANOW, master_terminfo)) {
-        log_fatal("could not tcsetattr(): %m");
+        util_fatal("could not tcsetattr(): %m");
     }
 
     if (name_arg == NULL) {
@@ -102,11 +102,11 @@ vserial_create(const char *name_arg) {
     }
 
     if (strlen(name) >= PATH_MAX) {
-        log_fatal("length of name(%d) >= PATH_MAX(%d)\n", strlen(name), PATH_MAX);
+        util_fatal("length of name(%d) >= PATH_MAX(%d)\n", strlen(name), PATH_MAX);
     }
 
     if (strlen(slave_path) >= PATH_MAX) {
-        log_fatal("length of slave_path(%d) >= PATH_MAX(%d)\n", strlen(slave_path), PATH_MAX);
+        util_fatal("length of slave_path(%d) >= PATH_MAX(%d)\n", strlen(slave_path), PATH_MAX);
     }
 
     p->name = util_strndup(name, PATH_MAX);
@@ -127,7 +127,7 @@ vserial_get_name(VSERIAL *p) {
 // copies the veserial_handlers from vserial into handlers
 void
 vserial_copy_handlers(UNUSED VSERIAL *vserial, UNUSED struct vserial_handlers *handlers) {
-    log_fatal("vserial_copy_handlers(): not implemented");
+    util_fatal("vserial_copy_handlers(): not implemented");
 }
 
 // updates the handlers stored in vserial with the contents of handlers
@@ -180,7 +180,7 @@ vserial_call_control_line_handler(VSERIAL *vserial) {
     log_debug("the slave FD is %d", slave_fd);
 
     if (ioctl(slave_fd, TIOCMGET, &modem_bits) == -1) {
-        log_fatal("Could not ioctl(TIOCMGET): %m");
+        util_fatal("Could not ioctl(TIOCMGET): %m");
     }
 
     control_lines.cts = modem_bits & TIOCM_CTS;
@@ -216,7 +216,7 @@ vserial_call_recv_data_handler(VSERIAL *vserial, uint8_t *buf, size_t len) {
 void
 vserial_send(VSERIAL *vserial, void *buf, size_t len) {
     if (vserial->send_buffer != NULL) {
-        log_fatal("attempt to call vserial_send() when send_buffer was not empty");
+        util_fatal("attempt to call vserial_send() when send_buffer was not empty");
     }
 
     vserial->send_buffer = util_zalloc(len);
@@ -235,7 +235,7 @@ vserial_manage_symlink(const char *target, UNUSED const char *pty_slave) {
         if (errno == ENOENT) {
             create_link = true;
         } else {
-            log_fatal("could not lstat(%s): %m", target);
+            util_fatal("could not lstat(%s): %m", target);
         }
     } else if (target_info.st_mode & S_IFLNK) {
         // the desired target is already a symlink
@@ -245,25 +245,25 @@ vserial_manage_symlink(const char *target, UNUSED const char *pty_slave) {
         // it work then???
         ssize_t read = readlink(target, links_to, PATH_MAX);
         if (read == -1) {
-            log_fatal("could not readlink(%s): %m", target);
+            util_fatal("could not readlink(%s): %m", target);
         }
 
         log_debug("symlink %s -> %s", target, links_to);
         if (strcmp(pty_slave, links_to)) {
             log_debug("  symlink: need to update to point at %s", pty_slave);
             if(unlink(target)) {
-                log_fatal("could not unlink(%s): %m", target);
+                util_fatal("could not unlink(%s): %m", target);
             }
             create_link = true;
         }
     } else {
-        log_fatal("will not overwrite %s with symlink\n", target);
+        util_fatal("will not overwrite %s with symlink\n", target);
     }
 
     if (create_link) {
         log_debug("Creating symlink: %s -> %s\n", pty_slave, target);
         if (symlink(pty_slave, target)) {
-            log_fatal("could not symlink(%s, %s): %m", pty_slave, target);
+            util_fatal("could not symlink(%s, %s): %m", pty_slave, target);
         }
     }
 }

@@ -33,6 +33,11 @@ struct ptt_context {
     RIG *rig;
 };
 
+//int
+//ptt_hamlib_debug_handler(enum rig_debug_level_e debug_level, rig_ptr_t user_data, const char *fmt, va_list ap) {
+//
+//}
+
 static void
 ptt_init_handler(UNUSED VSERIAL *vserial, const char *name) {
     struct ptt_context *context = util_zalloc(sizeof(struct ptt_context));
@@ -44,7 +49,7 @@ ptt_init_handler(UNUSED VSERIAL *vserial, const char *name) {
 
     RIG *rig = rig_init(rigid);
     if (! rig) {
-        log_fatal("could not rig_init(%d)\n", rigid);
+        util_fatal("could not rig_init(%d)\n", rigid);
     }
 
     strncpy(
@@ -55,14 +60,14 @@ ptt_init_handler(UNUSED VSERIAL *vserial, const char *name) {
 
     ret = rig_open(rig);
     if (ret != RIG_OK) {
-        log_fatal("Could not rig_open(): %s\n", rigerror(ret));
+        util_fatal("Could not rig_open(): %s\n", rigerror(ret));
     }
 
     log_lots("Opened rig!");
 
     ret = rig_get_ptt(rig, RIG_VFO_CURR, &ptt_state);
     if (ret != RIG_OK) {
-        log_fatal("could not get PTT state: %s\n", rigerror(ret));
+        util_fatal("could not get PTT state: %s\n", rigerror(ret));
     }
 
     context->rig = rig;
@@ -93,7 +98,7 @@ ptt_control_line_handler(UNUSED VSERIAL *vserial, UNUSED struct vserial_control_
 
     ret = rig_set_ptt(context->rig, RIG_VFO_CURR, ptt_state);
     if (ret != RIG_OK) {
-        log_fatal("Could not set transmit: %s\n", rigerror(ret));
+        util_fatal("Could not set transmit: %s\n", rigerror(ret));
     }
 }
 

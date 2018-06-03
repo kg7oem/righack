@@ -29,6 +29,9 @@
 #include "external/autodie.h"
 #include "types.h"
 
+#define util_fatal(...) util__fatal_va(log_source_righack, log_level_fatal, __func__, __FILE__, __LINE__, __VA_ARGS__)
+void util__fatal_va(enum log_source, enum log_level, const char *, const char *, int, const char *, ...);
+
 void * util_zalloc(size_t);
 void * util_memdup(void *, size_t);
 char * util_strdup(const char *);

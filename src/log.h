@@ -33,20 +33,23 @@ enum log_level {
     log_level_trace = 1,    // log input and output of subsystems
 };
 
+enum log_source {
+    log_source_unknown = 0,
+    log_source_righack,
+    log_source_hamlib,
+};
 
-// logs at FATAL log level and then calls guts_exit()
-#define log_fatal(...) log__level_exit(log_level_fatal, __func__, __FILE__, __LINE__, __VA_ARGS__)
-// logs at FATAL log level but still returns, caller must invoke guts_exit()
-#define log_fatal_ret(...) log__level_exit(log_level_fatal, __func__, __FILE__, __LINE__, __VA_ARGS__)
-#define log_warn(...) log__level(log_level_warn, __func__, __FILE__, __LINE__, __VA_ARGS__)
-#define log_notice(...) log__level(log_level_notice, __func__, __FILE__, __LINE__, __VA_ARGS__)
-#define log_info(...) log__level(log_level_info, __func__, __FILE__, __LINE__, __VA_ARGS__)
-#define log_verbose(...) log__level(log_level_verbose, __func__, __FILE__, __LINE__, __VA_ARGS__)
-#define log_debug(...) log__level(log_level_debug, __func__, __FILE__, __LINE__, __VA_ARGS__)
-#define log_lots(...) log__level(log_level_lots, __func__, __FILE__, __LINE__, __VA_ARGS__)
-#define log_trace(...) log__level(log_level_trace, __func__, __FILE__, __LINE__, __VA_ARGS__)
+#define log_fatal(...) log__level_va(log_source_righack, log_level_fatal, __func__, __FILE__, __LINE__, __VA_ARGS__)
+#define log_warn(...) log__level_va(log_source_righack, log_level_warn, __func__, __FILE__, __LINE__, __VA_ARGS__)
+#define log_notice(...) log__level_va(log_source_righack, log_level_notice, __func__, __FILE__, __LINE__, __VA_ARGS__)
+#define log_info(...) log__level_va(log_source_righack, log_level_info, __func__, __FILE__, __LINE__, __VA_ARGS__)
+#define log_verbose(...) log__level_va(log_source_righack, log_level_verbose, __func__, __FILE__, __LINE__, __VA_ARGS__)
+#define log_debug(...) log__level_va(log_source_righack, log_level_debug, __func__, __FILE__, __LINE__, __VA_ARGS__)
+#define log_lots(...) log__level_va(log_source_righack, log_level_lots, __func__, __FILE__, __LINE__, __VA_ARGS__)
+#define log_trace(...) log__level_va(log_source_righack, log_level_trace, __func__, __FILE__, __LINE__, __VA_ARGS__)
 
-void log__level(enum log_level, const char *, const char *, int, const char *, ...);
-void log__level_exit(enum log_level, const char *, const char *, int, const char *, ...);
+void log__level_va(enum log_source, enum log_level, const char *, const char *, int, const char *, ...);
+void log__level_args(enum log_source, enum log_level, const char *, const char *, int, const char *, va_list);
+void log__level_exit(enum log_source, enum log_level, const char *, const char *, int, const char *, ...);
 
 #endif /* SRC_LOG_H_ */

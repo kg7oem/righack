@@ -29,6 +29,18 @@
 #include "guts.h"
 #include "util.h"
 
+void
+util__fatal_va(enum log_source source, enum log_level level, const char *function, const char *path, int line, const char *fmt, ...) {
+    va_list args, copy;
+
+    va_start(args, fmt);
+    va_copy(copy, args);
+    va_end(args);
+
+    log__level_args(source, level, function, path, line, fmt, args);
+    guts_exit(exit_fatal);
+}
+
 // FIXME rename this to util_zalloc() - zero alloc, always zeros things
 void *
 util_zalloc(size_t bytes) {
@@ -46,7 +58,7 @@ util_strndup(const char *s, size_t n) {
     char *string = strndup(s, n);
 
     if (string == NULL) {
-        log_fatal("Could not strndup(): %m");
+        util_fatal("Could not strndup(): %m");
     }
 
     return string;
@@ -57,7 +69,7 @@ util_strdup(const char *s) {
     char *string = strdup(s);
 
     if (string == NULL) {
-        log_fatal("Could not strdup(): %m");
+        util_fatal("Could not strdup(): %m");
     }
 
     return string;
