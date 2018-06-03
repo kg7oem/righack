@@ -96,7 +96,12 @@ log__level(UNUSED enum log_level level, const char *function, const char *path, 
     vsnprintf(message_buf, CONFIG_LOG_SIZE, fmt, args);
     va_end(args);
 
-    printf("%s %s:%d %s() %s\n", level_name, file, line, function, message_buf);
+    FILE *output = stdout;
+    if (level >= log_level_warn) {
+        output = stderr;
+    }
+
+    fprintf(output, "%s %s:%d %s() %s\n", level_name, file, line, function, message_buf);
 }
 
 void
@@ -125,6 +130,11 @@ log__level_exit(UNUSED enum log_level level, const char *function, const char *p
     vsnprintf(message_buf, CONFIG_LOG_SIZE, fmt, args);
     va_end(args);
 
-    printf("%s %s:%d %s() %s\n", level_name, file, line, function, message_buf);
+    FILE *output = stdout;
+    if (level >= log_level_warn) {
+        output = stderr;
+    }
+
+    fprintf(output, "%s %s:%d %s() %s\n", level_name, file, line, function, message_buf);
     guts_exit(exit_fatal);
 }
