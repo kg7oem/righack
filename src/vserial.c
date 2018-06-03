@@ -32,6 +32,8 @@
 #include <termios.h>
 #include <unistd.h>
 
+#include "log.h"
+#include "types.h"
 #include "util.h"
 #include "vserial.h"
 #include "vserial-private.h"
@@ -41,7 +43,7 @@ static void vserial_manage_symlink(const char *, const char *);
 void
 vserial_destroy(VSERIAL *p) {
     if (p == NULL) {
-        util_fatal("attempt to vserial_destroy() a null pointer\n");
+        log_fatal("attempt to vserial_destroy() a null pointer\n");
     }
 
     if (p->pty_master.path != NULL) {
@@ -100,11 +102,11 @@ vserial_create(const char *name_arg) {
     }
 
     if (strlen(name) >= PATH_MAX) {
-        util_fatal("length of name(%d) >= PATH_MAX(%d)\n", strlen(name), PATH_MAX);
+        log_fatal("length of name(%d) >= PATH_MAX(%d)\n", strlen(name), PATH_MAX);
     }
 
     if (strlen(slave_path) >= PATH_MAX) {
-        util_fatal("length of slave_path(%d) >= PATH_MAX(%d)\n", strlen(slave_path), PATH_MAX);
+        log_fatal("length of slave_path(%d) >= PATH_MAX(%d)\n", strlen(slave_path), PATH_MAX);
     }
 
     p->name = util_strndup(name, PATH_MAX);
@@ -125,7 +127,7 @@ vserial_get_name(VSERIAL *p) {
 // copies the veserial_handlers from vserial into handlers
 void
 vserial_copy_handlers(UNUSED VSERIAL *vserial, UNUSED struct vserial_handlers *handlers) {
-    util_fatal("vserial_copy_handlers(): not implemented");
+    log_fatal("vserial_copy_handlers(): not implemented");
 }
 
 // updates the handlers stored in vserial with the contents of handlers
@@ -214,7 +216,7 @@ vserial_call_recv_data_handler(VSERIAL *vserial, uint8_t *buf, size_t len) {
 void
 vserial_send(VSERIAL *vserial, void *buf, size_t len) {
     if (vserial->send_buffer != NULL) {
-        util_fatal("attempt to call vserial_send() when send_buffer was not empty");
+        log_fatal("attempt to call vserial_send() when send_buffer was not empty");
     }
 
     vserial->send_buffer = util_malloc(len);
@@ -257,7 +259,7 @@ vserial_manage_symlink(const char *target, UNUSED const char *pty_slave) {
             create_link = true;
         }
     } else {
-        util_fatal("will not overwrite %s with symlink\n", target);
+        log_fatal("will not overwrite %s with symlink\n", target);
     }
 
     if (create_link) {

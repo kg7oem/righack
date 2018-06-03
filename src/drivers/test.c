@@ -22,6 +22,7 @@
 #include <stdio.h>
 #include <string.h>
 
+#include "../log.h"
 #include "test.h"
 #include "../vserial.h"
 #include "../util.h"
@@ -45,8 +46,8 @@ test_cleanup_handler(UNUSED VSERIAL *vserial) {
 static void
 test_control_line_handler(UNUSED VSERIAL *vserial, UNUSED struct vserial_control_line *control_line) {
     char *message = vserial_get_context(vserial);
-    printf("test_control_line_handler executed\n");
-    printf("Message: %s\n", message);
+    log_debug("test_control_line_handler executed");
+    log_info("Message: %s", message);
 }
 
 static void
@@ -56,14 +57,14 @@ test_recv_data_handler(UNUSED VSERIAL *vserial, UNUSED uint8_t *buf, size_t len)
     memcpy(text, buf, len);
     text[len] = 0;
 
-    printf("Got this: %s\n", text);
+    log_info("Got this: %s", text);
     free(text);
 }
 
 static void
 test_send_data_handler(UNUSED VSERIAL *vserial) {
     static bool sent = 0;
-    printf("  inside test_send_data_handler\n");
+    log_lots("  inside test_send_data_handler");
 
     if (sent) {
         vserial_disable_send(vserial);

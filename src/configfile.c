@@ -25,6 +25,8 @@
 
 #include "configfile.h"
 #include "external/toml.h"
+#include "log.h"
+#include "types.h"
 #include "util.h"
 
 toml_table_t* toml_root;
@@ -35,7 +37,7 @@ configfile_load(char *path) {
     FILE *fh;
 
     if (toml_root != NULL) {
-        util_fatal("attempt to load config file when a config is already loaded");
+        log_fatal("attempt to load config file when a config is already loaded");
     }
 
     fh = fopen(path, "r");
@@ -50,15 +52,14 @@ configfile_load(char *path) {
     }
 
     if (toml_root == NULL) {
-        fprintf(stderr, "Could not load %s:\n%s\n\n", path, error);
-        util_fatal("Unable to continue after error loading config file");
+        log_fatal("Could not load %s:\n%s\n\n", path, error);
     }
 }
 
 static void
 configfile_guard(void) {
     if (toml_root == NULL) {
-        util_fatal("toml_root is NULL\n");
+        log_fatal("toml_root is NULL\n");
     }
 }
 
@@ -93,22 +94,22 @@ configfile_gets_section_key(const char *section, const char *key) {
 
     toml_table_t *section_table = toml_table_in(toml_root, section);
     if (section_table == NULL) {
-        util_fatal("could not find config entry for '%s'\n", section);
+        log_fatal("could not find config entry for '%s'\n", section);
     }
 
-    printf("configfile_get_section_key(): looking up '%s' '%s'\n", section, key);
+    log_lots("looking up '%s' '%s'", section, key);
 
     const char *raw = toml_raw_in(section_table, key);
     if (raw == NULL) {
-        printf("configfile_get_section_key(): nothing found");
+        log_lots("configfile_get_section_key(): nothing found");
         return NULL;
     }
 
-    printf("configfile_get_section_key(): raw = '%s'\n", raw);
+    log_lots("configfile_get_section_key(): raw = '%s'", raw);
     if (toml_rtos(raw, &buf)) {
-        util_fatal("configfile_get_section_key(): toml_rtos() failed\n");
+        log_fatal("configfile_get_section_key(): toml_rtos() failed\n");
     }
-    printf("configfile_get_section_key(): buf = '%s'\n", buf);
+    log_lots("configfile_get_section_key(): buf = '%s'", buf);
 
     return buf;
 }
@@ -123,7 +124,7 @@ configfile_rgets_section_key(const char *section, const char *key) {
 
     value = configfile_gets_section_key(section, key);
     if (value == NULL) {
-        util_fatal("Could not get required key: '%s' from '%s'\n", key, section);
+        log_fatal("Could not get required key: '%s' from '%s'\n", key, section);
     }
 
     return value;
@@ -135,7 +136,7 @@ configfile_geti_section_key(const char *section, const char *key, int64_t *dest)
 
     toml_table_t *section_table = toml_table_in(toml_root, section);
     if (section_table == NULL) {
-        util_fatal("could not find config entry for '%s'\n", section);
+        log_fatal("could not find config entry for '%s'\n", section);
     }
 
     const char *raw = toml_raw_in(section_table, key);
@@ -144,7 +145,7 @@ configfile_geti_section_key(const char *section, const char *key, int64_t *dest)
     }
 
     if (toml_rtoi(raw, dest)) {
-        util_fatal("could not toml_rtoi()\n");
+        log_fatal("could not toml_rtoi()\n");
     }
 
     return true;
@@ -156,7 +157,7 @@ configfile_rgeti_section_key(const char *section, const char *key) {
     int64_t result;
 
     if (! configfile_geti_section_key(section, key, &result)) {
-        util_fatal("could not find '%s' in '%s'\n", key, section);
+        log_fatal("could not find '%s' in '%s'\n", key, section);
     }
 
     return result;

@@ -1,7 +1,8 @@
 /*
- * driver.test.h
+ * types.h
  *
- *  Created on: Jun 1, 2018
+ *  Created on: Jun 2, 2018
+ *      Author: tyler
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -18,12 +19,10 @@
  *
  */
 
-#ifndef SRC_DRIVER_TEST_H_
-#define SRC_DRIVER_TEST_H_
+#ifndef SRC_TYPES_H_
+#define SRC_TYPES_H_
 
-#include "../driver.h"
-#include "../types.h"
+#define UNUSED __attribute__((unused))
+#define TLOCAL __thread
 
-struct driver_info * test_driver_info(void);
-
-#endif /* SRC_DRIVER_TEST_H_ */
+#endif /* SRC_TYPES_H_ */

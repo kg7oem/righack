@@ -33,7 +33,9 @@
 #include <unistd.h>
 
 #include "config.h"
+#include "log.h"
 #include "runloop.h"
+#include "types.h"
 #include "util.h"
 #include "vserial-private.h"
 
@@ -73,7 +75,7 @@ runloop_resize_vserial_lookup(int max_fd) {
 
         free(old_lookup);
     } else {
-        util_fatal("attempt to reduce size of the vserial_lookup array\n");
+        log_fatal("attempt to reduce size of the vserial_lookup array\n");
     }
 }
 
@@ -127,7 +129,7 @@ runloop_add_vserial(VSERIAL *vserial) {
     }
 
     if (watched_descriptors.vserial_lookup[master_fd] != NULL) {
-        util_fatal("attempt to add duplicate fd: %d\n", master_fd);
+        log_fatal("attempt to add duplicate fd: %d\n", master_fd);
     }
 
     watched_descriptors.vserial_lookup[master_fd] = vserial;
@@ -150,7 +152,7 @@ runloop_get_vserial_by_fd(int fd) {
     }
 
     if (vserial->pty_master.fd != fd) {
-        util_fatal("Got fd %d from vserial_lookup with key of %d\n", vserial->pty_master.fd, fd);
+        log_fatal("Got fd %d from vserial_lookup with key of %d\n", vserial->pty_master.fd, fd);
     }
 
     return vserial;
@@ -185,7 +187,7 @@ runloop_block_sigint(void) {
 
     if (retval) {
         // FIXME need to improve this so it has the error text
-        util_fatal("could not pthread_sigmask() - and can't perror, no: %d", retval);
+        log_fatal("could not pthread_sigmask() - and can't perror, no: %d", retval);
     }
 
     free(will_block);
@@ -198,7 +200,7 @@ runloop_unblock_sigint(void) {
 
     if (retval) {
         // FIXME need to improve this so it has the error text
-        util_fatal("could not pthread_sigmask() - and can't perror, no: %d", retval);
+        log_fatal("could not pthread_sigmask() - and can't perror, no: %d", retval);
     }
 
     free(will_unblock);
@@ -212,7 +214,7 @@ runloop_sigint_handler(UNUSED int signal) {
 
 void
 runloop_sigalrm_handler(UNUSED int signal) {
-    util_fatal("Timeout when trying to cleanup from runloop\n");
+    log_fatal("Timeout when trying to cleanup from runloop\n");
 }
 
 void
@@ -257,7 +259,7 @@ runloop_enable_read(int enable_fd) {
     }
 
     if (! found_it) {
-        util_fatal("Could not find fd %d in watched_descriptors", enable_fd);
+        log_fatal("Could not find fd %d in watched_descriptors", enable_fd);
     }
 
     return old_value;
@@ -283,7 +285,7 @@ runloop_disable_read(int disable_fd) {
     }
 
     if (! found_it) {
-        util_fatal("Could not find fd %d in watched_descriptors", disable_fd);
+        log_fatal("Could not find fd %d in watched_descriptors", disable_fd);
     }
 
     return old_value;
@@ -309,7 +311,7 @@ runloop_disable_write(int disable_fd) {
     }
 
     if (! found_it) {
-        util_fatal("Could not find fd %d in watched_descriptors", disable_fd);
+        log_fatal("Could not find fd %d in watched_descriptors", disable_fd);
     }
 
     return old_value;
@@ -335,7 +337,7 @@ runloop_enable_write(int enable_fd) {
     }
 
     if (! found_it) {
-        util_fatal("Could not find fd %d in watched_descriptors", enable_fd);
+        log_fatal("Could not find fd %d in watched_descriptors", enable_fd);
     }
 
     return old_value;
@@ -382,7 +384,7 @@ runloop_start(void) {
             short revents = watched[i].revents;
 
             if (revents & POLLERR) {
-                util_fatal("Got POLLERR\n");
+                log_fatal("Got POLLERR\n");
             }
 
             if (revents & (POLLOUT | POLLIN | POLLPRI)) {
@@ -390,7 +392,7 @@ runloop_start(void) {
                 VSERIAL *vserial = runloop_get_vserial_by_fd(fd);
 
                 if (vserial == NULL) {
-                    util_fatal("Could not find VSERIAL for fd %d", fd);
+                    log_fatal("Could not find VSERIAL for fd %d", fd);
                 }
 
                 if (revents & POLLOUT) {
@@ -421,7 +423,7 @@ runloop_start(void) {
                         printf("New send_buffer_size: %ld\n", vserial->send_buffer_size);
 
                         if (vserial->send_buffer_size < 0) {
-                            util_fatal("send_buffer_size < 0: %d", vserial->send_buffer_size);
+                            log_fatal("send_buffer_size < 0: %d", vserial->send_buffer_size);
                         }
 
                         if (vserial->send_buffer_size == 0) {

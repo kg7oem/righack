@@ -1,7 +1,8 @@
 /*
- * driver.test.h
+ * guts.h
  *
- *  Created on: Jun 1, 2018
+ *  Created on: Jun 2, 2018
+ *      Author: tyler
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -18,12 +19,18 @@
  *
  */
 
-#ifndef SRC_DRIVER_TEST_H_
-#define SRC_DRIVER_TEST_H_
+#ifndef SRC_GUTS_H_
+#define SRC_GUTS_H_
 
-#include "../driver.h"
-#include "../types.h"
+#include "types.h"
 
-struct driver_info * test_driver_info(void);
+enum exit_value {
+    exit_ok = 0,
+    exit_fatal = 1,
+    exit_args = 10,
+    exit_nomem = 100,
+};
 
-#endif /* SRC_DRIVER_TEST_H_ */
+void guts_exit(enum exit_value);
+
+#endif /* SRC_GUTS_H_ */
