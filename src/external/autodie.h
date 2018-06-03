@@ -29,11 +29,13 @@
 #ifndef SRC_EXTERNAL_AUTODIE_H_
 #define SRC_EXTERNAL_AUTODIE_H_
 
-typedef void (*autodie_handler_t)(int, const char *);
+typedef void (*autodie_handler_t)(const char *, int, const char *);
 
 // this call back will be invoked with the value of errno generated
 // during the failure
 void autodie_register_handler(autodie_handler_t);
+
+void ad__test_(void);
 
 void * ad_calloc(size_t, size_t);
 void * ad_malloc(size_t);

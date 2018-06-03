@@ -34,14 +34,18 @@
 // autodie enabled version with the same function prototype and with
 // the same name with an ad_ prefix, such as
 //
-// void * ad_malloc(size_t size);
+// void * ad_malloc(size_t size)
 //
 //
 // RULES
 //
 // 1. The functions must exist in libc - no making new ones
-// 2. No behavior changes except for error checking
-// 3. No bug fixes - don't do anything the libc didn't do
+// 2. The function signatures must match the original
+// 3. No behavior changes except for error checking
+// 4. No bug fixes - don't do anything the libc didn't do
+// 5. Do not malloc - these functions might get called in a situation where
+//    malloc() has already failed and there is no available RAM
+// 6. no macros - users must be able to get a function pointer
 //
 // tl;dr - don't do anything but error checking
 
@@ -59,6 +63,8 @@
 
 autodie_handler_t die_handler;
 int autodie_exit_value = 1;
+// thread local tracking of reentrance
+__thread bool inside_autodie = false;
 
 void
 autodie_register_handler(autodie_handler_t handler) {
@@ -77,15 +83,26 @@ autodie_set_exit_value(int new_value) {
     return old_value;
 }
 
+#define autodie_invoke(...) autodie__invoke(__func__, __VA_ARGS__)
+
+// no using autodie functions in here or in anything called by it
 static void
-autodie_invoke(int error_value, const char *fmt, ...) {
+autodie__invoke(const char *function, int error_value, const char *fmt, ...) {
     bool should_abort = false;
     char buf[MESSAGE_MAX_LEN];
     const char *message;
     va_list args;
 
+    if (inside_autodie) {
+        fprintf(stderr, "autodie: handler went reentrant\n");
+        fprintf(stderr, "autodie: function = %s\n", function);
+        abort();
+    }
+
+    inside_autodie = true;
+
     if (fmt == NULL) {
-        message = "(No error message supplied)";
+        message = "(no message)";
     } else {
         va_start(args, fmt);
         // FIXME detect when the message does not fit
@@ -96,18 +113,23 @@ autodie_invoke(int error_value, const char *fmt, ...) {
     }
 
     if (die_handler != NULL) {
-        die_handler(error_value, message);
+        die_handler(function, error_value, message);
         fprintf(stderr, "autodie: registered die handler did not stop the program\n");
         should_abort = 1;
     }
 
-    fprintf(stderr, "autodie: %s: %s\n", message, strerror(error_value));
+    fprintf(stderr, "autodie %s(): %s: %s\n", function, message, strerror(error_value));
 
     if (should_abort) {
         abort();
     }
 
     exit(autodie_exit_value);
+}
+
+void
+ad__test_(void) {
+    autodie_invoke(EADDRINUSE, "forced failure induced by test");
 }
 
 // stdlib.h
@@ -123,6 +145,14 @@ ad_calloc(size_t nmemb, size_t size) {
     return p;
 }
 
+// FIXME There is a case here that should probably break the rules
+// malloc() with a size of zero can return either NULL or a pointer
+// which must go to free(). With a size of zero getting NULL back
+// is not a failure.
+//
+// Since ad_malloc() should never return NULL (that's the point)
+// it seems like it should be fatal to attempt to use a size of
+// zero to enforce predictable behavior.
 void *
 ad_malloc(size_t bytes) {
     void *p = malloc(bytes);

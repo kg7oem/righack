@@ -19,6 +19,7 @@
  *
  */
 
+#include <errno.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -31,11 +32,33 @@
 #include "util.h"
 #include "vserial.h"
 
+static void
+autodie_handler(const char *function, int error, const char *message) {
+    // TODO some other error numbers might make sense to have dedicated
+    // exit values
+    // EMFILE - Too  many  open  files
+    if (error == ENOMEM) {
+        // when memory allocation has failed the error handling
+        // is kept away from the logging because it might try to
+        // acquire RAM and fail
+        fprintf(stderr, "%s() died \"%s\": %s\n", function, message, strerror(error));
+        guts_exit(exit_nomem);
+    }
+
+    log_fatal("%s() died \"%s\": %s", function, message, strerror(error));
+}
+
+
+void
+bootstrap(void) {
+    autodie_register_handler(autodie_handler);
+}
+
 int
 main(int argc, char **argv) {
-    log_trace("main just started");
+    bootstrap();
 
-//    log_fatal("experiment over");
+    log_trace("main just started");
 
     if (argc != 2) {
         log_fatal_ret("Usage: specify exactly one config file as an argument");
