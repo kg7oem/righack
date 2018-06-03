@@ -19,6 +19,7 @@
  *
  */
 
+#include <errno.h>
 #include <fcntl.h>
 #include <linux/limits.h>
 #include <pty.h>
@@ -26,12 +27,16 @@
 #include <stdlib.h>
 #include <string.h>
 #include <sys/ioctl.h>
+#include <sys/stat.h>
+#include <sys/types.h>
 #include <termios.h>
 #include <unistd.h>
 
 #include "util.h"
 #include "vserial.h"
 #include "vserial-private.h"
+
+static void vserial_manage_symlink(const char *, const char *);
 
 void
 vserial_destroy(VSERIAL *p) {
@@ -57,10 +62,10 @@ vserial_destroy(VSERIAL *p) {
 }
 
 VSERIAL *
-vserial_create(char *name_arg) {
+vserial_create(const char *name_arg) {
     VSERIAL *p = util_malloc(sizeof(VSERIAL));
     struct termios *master_terminfo = &p->pty_master.terminfo;
-    char *name = NULL;
+    const char *name = NULL;
     int *master = &p->pty_master.fd;
     int *slave = &p->pty_slave.fd;
     char slave_path[PATH_MAX];
@@ -106,7 +111,7 @@ vserial_create(char *name_arg) {
     p->pty_slave.path = util_strndup(slave_path, PATH_MAX);
 
     if (name_arg != NULL) {
-        fprintf(stderr, "Would symlink %s to %s\n", p->name, p->pty_slave.path);
+        vserial_manage_symlink(name, p->pty_slave.path);
     }
 
     return p;
@@ -217,4 +222,48 @@ vserial_send(VSERIAL *vserial, void *buf, size_t len) {
     vserial->send_buffer_size = len;
 
     runloop_enable_write(vserial->pty_master.fd);
+}
+
+static void
+vserial_manage_symlink(const char *target, UNUSED const char *pty_slave) {
+    struct stat target_info;
+    bool create_link = false;
+
+    printf("vserial_manage_symlink(): here we are\n");
+
+    if (lstat(target, &target_info)) {
+        if (errno == ENOENT) {
+            create_link = true;
+        } else {
+            util_fatal_perror("could not lstat(%s): ", target);
+        }
+    } else if (target_info.st_mode & S_IFLNK) {
+        // the desired target is already a symlink
+        char links_to[PATH_MAX];
+        // FIXME readlink() man page says it does not add a terminating
+        // NULL but is that true? This could be bad if so - also why does
+        // it work then???
+        ssize_t read = readlink(target, links_to, PATH_MAX);
+        if (read == -1) {
+            util_fatal_perror("could not readlink(%s): ", target);
+        }
+
+        printf("  symlink: %s -> %s\n", target, links_to);
+        if (strcmp(pty_slave, links_to)) {
+            printf("  symlink: need to update to point at %s\n", pty_slave);
+            if(unlink(target)) {
+                util_fatal_perror("could not unlink(%s): ", target);
+            }
+            create_link = true;
+        }
+    } else {
+        util_fatal("will not overwrite %s with symlink\n", target);
+    }
+
+    if (create_link) {
+        printf("Creating symlink: %s -> %s\n", pty_slave, target);
+        if (symlink(pty_slave, target)) {
+            util_fatal_perror("could not symlink(%s, %s): ", pty_slave, target);
+        }
+    }
 }

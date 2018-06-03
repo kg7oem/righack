@@ -31,7 +31,6 @@
 
 int
 main(int argc, char **argv) {
-    char *name = NULL;
     struct driver_info *driver = ptt_driver_info();
 
     if (argc != 2) {
@@ -58,6 +57,7 @@ main(int argc, char **argv) {
         util_fatal("only the vserial io type is supported, not '%s'\n", p);
     }
 
+    const char *name = configfile_gets_section_key(section_name, "io.port");
     VSERIAL *vserial = vserial_create(name);
 
     printf("Fake serial device name: %s\n", vserial_get_name(vserial));

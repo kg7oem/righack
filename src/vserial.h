@@ -52,7 +52,7 @@ struct vserial_handlers {
 };
 
 void vserial_destroy(VSERIAL *);
-VSERIAL * vserial_create(char *);
+VSERIAL * vserial_create(const char *);
 
 char * vserial_get_name(VSERIAL *);
 void vserial_copy_handlers(VSERIAL *, struct vserial_handlers *);
