@@ -35,6 +35,10 @@ int
 main(int argc, char **argv) {
     log_trace("main just started");
 
+    ad_malloc(-1);
+
+    log_fatal("experiment over");
+
     if (argc != 2) {
         log_fatal_ret("Usage: specify exactly one config file as an argument");
         guts_exit(exit_args);

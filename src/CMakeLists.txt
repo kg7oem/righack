@@ -9,7 +9,7 @@ add_executable(righack
     main.c guts.c log.c util.c vserial.c runloop.c
     configfile.c
     drivers/test.c drivers/ptt.c
-    external/toml.c
+    external/toml.c external/autodie.c
 )
 TARGET_LINK_LIBRARIES(righack util)
 TARGET_LINK_LIBRARIES(righack pthread)

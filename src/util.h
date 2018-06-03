@@ -26,6 +26,7 @@
 #include <linux/types.h>
 #include <pthread.h>
 
+#include "external/autodie.h"
 #include "types.h"
 
 void * util_malloc(size_t);
