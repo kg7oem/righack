@@ -71,7 +71,7 @@ main(int argc, char **argv) {
 
     const char *section_name;
     for(int i = 0; (section_name = configfile_get_section_name(i)); i++) {
-        log_debug("config section #%d: %s\n", i, section_name);
+        log_debug("config section #%d: %s", i, section_name);
     }
 
     section_name = configfile_get_section_name(0);
