@@ -52,7 +52,7 @@ test_control_line_handler(UNUSED VSERIAL *vserial, UNUSED struct vserial_control
 
 static void
 test_recv_data_handler(UNUSED VSERIAL *vserial, UNUSED uint8_t *buf, size_t len) {
-    char *text = util_malloc(len + 1);
+    char *text = util_zalloc(len + 1);
 
     memcpy(text, buf, len);
     text[len] = 0;
@@ -77,7 +77,7 @@ test_send_data_handler(UNUSED VSERIAL *vserial) {
 
 struct driver_info *
 test_driver_info(void) {
-    struct driver_info *info = util_malloc(sizeof(struct driver_info));
+    struct driver_info *info = util_zalloc(sizeof(struct driver_info));
 
     info->init = test_init_handler;
     info->cleanup = test_cleanup_handler;

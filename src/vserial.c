@@ -65,7 +65,7 @@ vserial_destroy(VSERIAL *p) {
 
 VSERIAL *
 vserial_create(const char *name_arg) {
-    VSERIAL *p = util_malloc(sizeof(VSERIAL));
+    VSERIAL *p = util_zalloc(sizeof(VSERIAL));
     struct termios *master_terminfo = &p->pty_master.terminfo;
     const char *name = NULL;
     int *master = &p->pty_master.fd;
@@ -219,7 +219,7 @@ vserial_send(VSERIAL *vserial, void *buf, size_t len) {
         log_fatal("attempt to call vserial_send() when send_buffer was not empty");
     }
 
-    vserial->send_buffer = util_malloc(len);
+    vserial->send_buffer = util_zalloc(len);
     memcpy(vserial->send_buffer, buf, len);
     vserial->send_buffer_size = len;
 

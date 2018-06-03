@@ -29,7 +29,7 @@
 #include "external/autodie.h"
 #include "types.h"
 
-void * util_malloc(size_t);
+void * util_zalloc(size_t);
 void * util_memdup(void *, size_t);
 char * util_strdup(const char *);
 char * util_strndup(const char *, size_t);

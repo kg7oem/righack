@@ -35,7 +35,7 @@ struct ptt_context {
 
 static void
 ptt_init_handler(UNUSED VSERIAL *vserial, const char *name) {
-    struct ptt_context *context = util_malloc(sizeof(struct ptt_context));
+    struct ptt_context *context = util_zalloc(sizeof(struct ptt_context));
     rig_model_t rigid = configfile_rgeti_section_key(name, "driver.hamlib.rigid");
     ptt_t ptt_state;
     int ret;

@@ -175,7 +175,7 @@ configfile_rgeti_section_key(const char *section, const char *key) {
 //        free(list);
 //    }
 //
-//    list = util_malloc(sizeof(const char *) * (num_sections + 1));
+//    list = util_zalloc(sizeof(const char *) * (num_sections + 1));
 //
 //    for(int i = 0; i < num_sections; i++) {
 //        list[i] = configfile_get_section_name(i);

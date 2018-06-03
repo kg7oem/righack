@@ -113,6 +113,17 @@ autodie_invoke(int error_value, const char *fmt, ...) {
 // stdlib.h
 
 void *
+ad_calloc(size_t nmemb, size_t size) {
+    void *p = calloc(nmemb, size);
+
+    if (p == NULL) {
+        autodie_invoke(errno, "Could not allocate %d * %d = %d bytes", nmemb, size, nmemb * size);
+    }
+
+    return p;
+}
+
+void *
 ad_malloc(size_t bytes) {
     void *p = malloc(bytes);
 

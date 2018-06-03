@@ -31,14 +31,8 @@
 
 // FIXME rename this to util_zalloc() - zero alloc, always zeros things
 void *
-util_malloc(size_t bytes) {
-    void *p = calloc(1, bytes);
-
-    if (p == NULL) {
-        log_fatal("Could not allocate %d bytes: %m", bytes);
-    }
-
-    return p;
+util_zalloc(size_t bytes) {
+    return ad_calloc(1, bytes);
 }
 
 // FIXME make this be a realloc() that also has zerod memory
@@ -71,7 +65,7 @@ util_strdup(const char *s) {
 
 void *
 util_memdup(void *p, size_t len) {
-    void *ret = util_malloc(len);
+    void *ret = util_zalloc(len);
     memcpy(ret, p, len);
     return ret;
 }

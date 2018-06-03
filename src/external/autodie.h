@@ -35,7 +35,8 @@ typedef void (*autodie_handler_t)(int, const char *);
 // during the failure
 void autodie_register_handler(autodie_handler_t);
 
-void * ad_malloc(size_t bytes);
+void * ad_calloc(size_t, size_t);
+void * ad_malloc(size_t);
 
 char * ad_strdup(const char *);
 

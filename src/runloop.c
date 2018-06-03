@@ -61,11 +61,11 @@ runloop_resize_vserial_lookup(int max_fd) {
     size_t size = sizeof(VSERIAL *) * (max_fd + 1);
 
     if (watched_descriptors.vserial_lookup == NULL) {
-        watched_descriptors.vserial_lookup = util_malloc(size);
+        watched_descriptors.vserial_lookup = util_zalloc(size);
         watched_descriptors.max_fd = max_fd;
     } else if (watched_descriptors.max_fd < max_fd) {
         size_t copy_bytes = sizeof(VSERIAL *) * (watched_descriptors.max_fd + 1);
-        VSERIAL * *new_lookup = util_malloc(size);
+        VSERIAL * *new_lookup = util_zalloc(size);
         VSERIAL * *old_lookup = watched_descriptors.vserial_lookup;
 
         memcpy(new_lookup, old_lookup, copy_bytes);
@@ -95,7 +95,7 @@ runloop_count_vserial(void) {
 struct pollfd *
 runloop_create_watched(void) {
     int num_fd = runloop_count_vserial();
-    struct pollfd *watched = util_malloc(sizeof(struct pollfd) * num_fd);
+    struct pollfd *watched = util_zalloc(sizeof(struct pollfd) * num_fd);
     int fd_slot = 0;
 
     for(int i = 0; i <= watched_descriptors.max_fd; i++) {
@@ -160,7 +160,7 @@ runloop_get_vserial_by_fd(int fd) {
 
 sigset_t *
 runloop_create_empty_sigset(void) {
-    sigset_t *set = util_malloc(sizeof(sigset_t));
+    sigset_t *set = util_zalloc(sizeof(sigset_t));
 
     if (sigemptyset(set)) {
         log_fatal("could not sigemptyset: %m");
@@ -349,7 +349,7 @@ runloop_start(void) {
     struct pollfd *watched = watched_descriptors.watched;
     int nfds = watched_descriptors.num_fd;
     sigset_t *masked_signals = runloop_create_empty_sigset();
-    uint8_t *read_buf = util_malloc(CONFIG_READ_SIZE);
+    uint8_t *read_buf = util_zalloc(CONFIG_READ_SIZE);
 
     should_run = 1;
 
