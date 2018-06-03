@@ -26,30 +26,6 @@
  *
  */
 
-// versions of libc and system functions that will never return
-// unless there is a success. When ever a failure happens execution
-// of the program is stopped.
-//
-// For any given function in libc there exists (if implemented) an
-// autodie enabled version with the same function prototype and with
-// the same name with an ad_ prefix, such as
-//
-// void * ad_malloc(size_t size)
-//
-//
-// RULES
-//
-// 1. The functions must exist in libc - no making new ones
-// 2. The function signatures must match the original
-// 3. No behavior changes except for error checking
-// 4. No bug fixes - don't do anything the libc didn't do
-// 5. Do not malloc - these functions might get called in a situation where
-//    malloc() has already failed and there is no available RAM
-// 6. no macros - users must be able to get a function pointer
-//
-// tl;dr - don't do anything but error checking
-
-
 #include <errno.h>
 #include <stdarg.h>
 #include <stdbool.h>
@@ -136,6 +112,10 @@ ad__test_(void) {
 
 void *
 ad_calloc(size_t nmemb, size_t size) {
+    if (nmemb == 0 || size == 0) {
+        autodie_invoke(EINVAL, "nmemb = %d; size = %d", nmemb, size);
+    }
+
     void *p = calloc(nmemb, size);
 
     if (p == NULL) {
@@ -145,16 +125,12 @@ ad_calloc(size_t nmemb, size_t size) {
     return p;
 }
 
-// FIXME There is a case here that should probably break the rules
-// malloc() with a size of zero can return either NULL or a pointer
-// which must go to free(). With a size of zero getting NULL back
-// is not a failure.
-//
-// Since ad_malloc() should never return NULL (that's the point)
-// it seems like it should be fatal to attempt to use a size of
-// zero to enforce predictable behavior.
 void *
 ad_malloc(size_t bytes) {
+    if (bytes == 0) {
+        autodie_invoke(EINVAL, "attempt to allocate 0 bytes");
+    }
+
     void *p = malloc(bytes);
 
     if (p == NULL) {
