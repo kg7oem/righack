@@ -23,6 +23,7 @@
 #include <stdio.h>
 #include <string.h>
 
+#include "../configfile.h"
 #include "../driver.h"
 #include "../util.h"
 
@@ -31,21 +32,24 @@ struct ptt_context {
 };
 
 static void
-ptt_init_handler(UNUSED VSERIAL *vserial) {
+ptt_init_handler(UNUSED VSERIAL *vserial, const char *name) {
     struct ptt_context *context = util_malloc(sizeof(struct ptt_context));
-    rig_model_t rigid = 378; // IC-7610
-    char *device = "/dev/ttyUSB0";
+    rig_model_t rigid = configfile_rgeti_section_key(name, "driver.hamlib.rigid");
     ptt_t ptt_state;
     int ret;
 
-    printf("  Inside ptt_init_handler\n");
+    printf("  Inside ptt_init_handler; my name = '%s'\n", name);
 
     RIG *rig = rig_init(rigid);
     if (! rig) {
         util_fatal("could not rig_init(%d)\n", rigid);
     }
 
-    strncpy(rig->state.rigport.pathname,device,FILPATHLEN - 1);
+    strncpy(
+            rig->state.rigport.pathname,
+            configfile_rgets_section_key(name, "driver.hamlib.serial"),
+            FILPATHLEN - 1
+        );
 
     ret = rig_open(rig);
     if (ret != RIG_OK) {

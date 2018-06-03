@@ -63,84 +63,122 @@ configfile_guard(void) {
 }
 
 int
-configfile_count_vserial(void) {
-    toml_array_t *vserials;
-    int i;
-
+configfile_get_section_count(void) {
     configfile_guard();
 
-    vserials = toml_array_in(toml_root, "vserial");
 
-    if (vserials == NULL) {
-        return 0;
-    }
-
-    for(i = 0; true; i++) {
-        toml_table_t *table = toml_table_at(vserials, i);
-        if (table == NULL) {
-            break;
-        }
+    const char *p;
+    int i;
+    while((p = configfile_get_section_name(i))) {
+        i++;
     }
 
     return i;
 }
 
-static toml_array_t *
-configfile_get_vserials(void) {
-    toml_array_t *vserials = toml_array_in(toml_root, "vserial");
-    if (vserials == NULL) {
-        util_fatal("Could not find a vserial section in config file");
-    }
-    return vserials;
-}
-
-static toml_table_t *
-configfile_get_vserial_num(int num) {
-    toml_table_t *table = toml_table_at(configfile_get_vserials(), num);
-    if (table == NULL) {
-        util_fatal("Could not get vserial config #%d", num);
-    }
-    return table;
+const char *
+configfile_get_section_name(int num) {
+    configfile_guard();
+    return toml_key_in(toml_root, num);
 }
 
 const char *
-configfile_get_vserial_name(int num) {
-    static TLOCAL char *name = NULL;
+configfile_gets_section_key(const char *section, const char *key) {
+    static TLOCAL char *buf = NULL;
     configfile_guard();
 
-    toml_table_t *table = configfile_get_vserial_num(num);
-    const char *raw = toml_raw_in(table, "name");
+    if (buf != NULL) {
+        free(buf);
+    }
 
+    toml_table_t *section_table = toml_table_in(toml_root, section);
+    if (section_table == NULL) {
+        util_fatal("could not find config entry for '%s'\n", section);
+    }
+
+    printf("configfile_get_section_key(): looking up '%s' '%s'\n", section, key);
+
+    const char *raw = toml_raw_in(section_table, key);
     if (raw == NULL) {
-        util_fatal("Could not get name from vserial config #%d\n", num);
+        printf("configfile_get_section_key(): nothing found");
+        return NULL;
     }
 
-    if (name) {
-        free(name);
+    printf("configfile_get_section_key(): raw = '%s'\n", raw);
+    if (toml_rtos(raw, &buf)) {
+        util_fatal("configfile_get_section_key(): toml_rtos() failed\n");
     }
+    printf("configfile_get_section_key(): buf = '%s'\n", buf);
 
-    toml_rtos(raw, &name);
-
-    return name;
+    return buf;
 }
 
+// A "reliable" version of configfile_get_section_key()
+// Reliable means that it will never fail. It does that
+// but causing a fatal error if anything goes wrong.
 const char *
-configfile_get_vserial_driver(int num) {
-    static TLOCAL char *driver = NULL;
+configfile_rgets_section_key(const char *section, const char *key) {
+    const char *value;
     configfile_guard();
 
-    toml_table_t *table = configfile_get_vserial_num(num);
-    const char *raw = toml_raw_in(table, "driver");
-
-    if (raw == NULL) {
-        util_fatal("could not get driver from vserial config #%d\n", num);
+    value = configfile_gets_section_key(section, key);
+    if (value == NULL) {
+        util_fatal("Could not get required key: '%s' from '%s'\n", key, section);
     }
 
-    if (driver != NULL) {
-        free(driver);
-    }
-
-    toml_rtos(raw, &driver);
-
-    return driver;
+    return value;
 }
+
+bool
+configfile_geti_section_key(const char *section, const char *key, int64_t *dest) {
+    configfile_guard();
+
+    toml_table_t *section_table = toml_table_in(toml_root, section);
+    if (section_table == NULL) {
+        util_fatal("could not find config entry for '%s'\n", section);
+    }
+
+    const char *raw = toml_raw_in(section_table, key);
+    if (raw == NULL) {
+        return false;
+    }
+
+    if (toml_rtoi(raw, dest)) {
+        util_fatal("could not toml_rtoi()\n");
+    }
+
+    return true;
+}
+
+int64_t
+configfile_rgeti_section_key(const char *section, const char *key) {
+    configfile_guard();
+    int64_t result;
+
+    if (! configfile_geti_section_key(section, key, &result)) {
+        util_fatal("could not find '%s' in '%s'\n", key, section);
+    }
+
+    return result;
+}
+
+// FIXME untested
+//const char **
+//configfile_get_section_names(void) {
+//    configfile_guard();
+//
+//    static TLOCAL const char **list = NULL;
+//    int num_sections = configfile_get_section_count();
+//
+//    if (list != NULL) {
+//        free(list);
+//    }
+//
+//    list = util_malloc(sizeof(const char *) * (num_sections + 1));
+//
+//    for(int i = 0; i < num_sections; i++) {
+//        list[i] = configfile_get_section_name(i);
+//    }
+//
+//    return list;
+//}

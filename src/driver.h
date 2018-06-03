@@ -24,7 +24,7 @@
 
 #include "vserial.h"
 
-typedef void (*driver_init_handler)(VSERIAL *);
+typedef void (*driver_init_handler)(VSERIAL *, const char *);
 typedef void (*driver_cleanup_handler)(VSERIAL *);
 
 struct driver_info {

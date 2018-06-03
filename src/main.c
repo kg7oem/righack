@@ -39,14 +39,23 @@ main(int argc, char **argv) {
     }
 
     configfile_load(argv[1]);
-    printf("vserial sections in config: %d\n", configfile_count_vserial());
 
-    for(int i = 0; i < configfile_count_vserial(); i++) {
-        printf(
-                "  virtual serial port %s = %s\n",
-                configfile_get_vserial_name(i),
-                configfile_get_vserial_driver(i)
-        );
+    const char *section_name;
+    for(int i = 0; (section_name = configfile_get_section_name(i)); i++) {
+        printf("  Section #%d: %s\n", i, section_name);
+    }
+
+    section_name = configfile_get_section_name(0);
+    const char *p;
+
+    p = configfile_rgets_section_key(section_name, "driver.type");
+    if (strcmp(p, "ptt")) {
+        util_fatal("only the ptt driver type is supported, not '%s'\n", p);
+    }
+
+    p = configfile_rgets_section_key(section_name, "io.type");
+    if (strcmp(p, "vserial")) {
+        util_fatal("only the vserial io type is supported, not '%s'\n", p);
     }
 
     VSERIAL *vserial = vserial_create(name);
@@ -57,7 +66,7 @@ main(int argc, char **argv) {
     vserial_set_handlers(vserial, &driver->vserial);
 
     if (driver->init != NULL) {
-        driver->init(vserial);
+        driver->init(vserial, section_name);
     }
 
     printf("We are good: starting runloop\n");

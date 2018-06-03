@@ -22,10 +22,21 @@
 #ifndef SRC_CONFIG_H_
 #define SRC_CONFIG_H_
 
+#include <inttypes.h>
+#include <stdbool.h>
+
 void configfile_load(char *);
 
 int configfile_count_vserial(void);
 const char * configfile_get_vserial_name(int);
 const char * configfile_get_vserial_driver(int);
+
+
+const char * configfile_get_section_name(int);
+const char * configfile_gets_section_key(const char *, const char *);
+const char * configfile_rgets_section_key(const char *, const char *);
+bool configfile_geti_section_key(const char *, const char *, int64_t *);
+int64_t configfile_rgeti_section_key(const char *, const char *);
+
 
 #endif /* SRC_CONFIG_H_ */

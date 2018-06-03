@@ -27,7 +27,7 @@
 #include "../util.h"
 
 static void
-test_init_handler(UNUSED VSERIAL *vserial) {
+test_init_handler(UNUSED VSERIAL *vserial, UNUSED const char *name) {
     char *context = util_strdup("This is something in the context\n");
     vserial_set_context(vserial, context);
     vserial_enable_recv(vserial);
