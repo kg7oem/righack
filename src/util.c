@@ -25,6 +25,8 @@
 #include <stdlib.h>
 #include <string.h>
 
+#include "log.h"
+#include "guts.h"
 #include "util.h"
 
 // FIXME rename this to util_zalloc() - zero alloc, always zeros things
@@ -33,7 +35,7 @@ util_malloc(size_t bytes) {
     void *p = calloc(1, bytes);
 
     if (p == NULL) {
-        util_fatal_perror("Could not allocate %d bytes: ", bytes);
+        log_fatal("Could not allocate %d bytes: %m", bytes);
     }
 
     return p;
@@ -45,35 +47,12 @@ util_malloc(size_t bytes) {
 // FIXME make ths be a zrealloc() that also frees the original memory
 // void * util_zreallocf(void *, int)
 
-void
-util_fatal(char *fmt, ...) {
-    va_list args;
-
-    va_start(args, fmt);
-    vfprintf(stderr, fmt, args);
-    va_end(args);
-
-    abort();
-}
-
-void
-util_fatal_perror(char *fmt, ...) {
-    va_list args;
-
-    va_start(args, fmt);
-    vfprintf(stderr, fmt, args);
-    va_end(args);
-
-    perror("");
-    abort();
-}
-
 char *
 util_strndup(const char *s, size_t n) {
     char *string = strndup(s, n);
 
     if (string == NULL) {
-        util_fatal_perror("Could not strndup(): ");
+        log_fatal("Could not strndup(): %m");
     }
 
     return string;
@@ -84,7 +63,7 @@ util_strdup(const char *s) {
     char *string = strdup(s);
 
     if (string == NULL) {
-        util_fatal_perror("Could not strdup(): ");
+        log_fatal("Could not strdup(): %m");
     }
 
     return string;

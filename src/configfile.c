@@ -42,13 +42,13 @@ configfile_load(char *path) {
 
     fh = fopen(path, "r");
     if (fh == 0) {
-        util_fatal_perror("could not fopen(%s): ", path);
+        log_fatal("could not fopen(%s): %m", path);
     }
 
     toml_root = toml_parse_file(fh, error, sizeof(error));
 
     if (fclose(fh)) {
-        util_fatal_perror("could not fclose(%s): ", path);
+        log_fatal("could not fclose(%s): %m", path);
     }
 
     if (toml_root == NULL) {

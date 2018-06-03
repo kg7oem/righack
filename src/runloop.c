@@ -109,12 +109,12 @@ runloop_create_watched(void) {
             // information changes on the slave pty
             poll_entry->events |= POLLPRI;
 
-            printf("new poll_entry events: %d\n", poll_entry->events);
+            //printf("new poll_entry events: %d\n", poll_entry->events);
             fd_slot++;
         }
     }
 
-    printf("Just built %d poll entries from vserial_lookup max_fd=%d\n", fd_slot, watched_descriptors.max_fd);
+    //printf("Just built %d poll entries from vserial_lookup max_fd=%d\n", fd_slot, watched_descriptors.max_fd);
 
     return watched;
 }
@@ -138,9 +138,9 @@ runloop_add_vserial(VSERIAL *vserial) {
 
     free(old_watched);
 
-    printf("new Master fd: %d\n", master_fd);
-    printf("new max_fd: %d\n", watched_descriptors.max_fd);
-    printf("Number of things in vserial_lookup: %d\n", runloop_count_vserial());
+    //printf("new Master fd: %d\n", master_fd);
+    //printf("new max_fd: %d\n", watched_descriptors.max_fd);
+    //printf("Number of things in vserial_lookup: %d\n", runloop_count_vserial());
 }
 
 VSERIAL *
@@ -163,7 +163,7 @@ runloop_create_empty_sigset(void) {
     sigset_t *set = util_malloc(sizeof(sigset_t));
 
     if (sigemptyset(set)) {
-        util_fatal_perror("could not sigemptyset: ");
+        log_fatal("could not sigemptyset: %m");
     }
 
     return set;
@@ -174,7 +174,7 @@ runloop_create_sigint_sigset(void) {
     sigset_t *set = runloop_create_empty_sigset();
 
     if (sigaddset(set, SIGINT)) {
-        util_fatal_perror("could not sigaddset: ");
+        log_fatal("could not sigaddset: %m");
     }
 
     return set;
@@ -220,22 +220,22 @@ runloop_sigalrm_handler(UNUSED int signal) {
 void
 runloop_install_signal_handlers(void) {
     if (signal(SIGINT, runloop_sigint_handler) == SIG_ERR) {
-        util_fatal_perror("Could not register INT signal handler: ");
+        log_fatal("Could not register INT signal handler: %m");
     }
 
     if (signal(SIGALRM, runloop_sigalrm_handler) == SIG_ERR) {
-        util_fatal_perror("Could not register ALRM signal handler: ");
+        log_fatal("Could not register ALRM signal handler: %m");
     }
 }
 
 void
 runloop_remove_signal_handlers(void) {
     if (signal(SIGINT, SIG_DFL) == SIG_ERR) {
-        util_fatal_perror("Could not remove INT signal handler: ");
+        log_fatal("Could not remove INT signal handler: %m");
     }
 
     if (signal(SIGALRM, SIG_DFL) == SIG_ERR) {
-        util_fatal_perror("could not remove ALRM signal handler: ");
+        log_fatal("could not remove ALRM signal handler: %m");
     }
 }
 
@@ -356,10 +356,10 @@ runloop_start(void) {
     runloop_install_signal_handlers();
 
     while(1) {
-        printf("About to call poll(*, %d, -1); should_run: %i\n", nfds, should_run);
+        //printf("About to call poll(*, %d, -1); should_run: %i\n", nfds, should_run);
 
         if (! should_run) {
-            printf("Leaving runloop because of ctrl+c\n");
+            //printf("Leaving runloop because of ctrl+c\n");
             break;
         }
 
@@ -373,14 +373,14 @@ runloop_start(void) {
                 continue;
             }
 
-            util_fatal_perror("ppoll() failed:");
+            log_fatal("ppoll() failed: %m");
         }
 
-        printf("poll() returned: %d\n", retval);
-        printf("poll's revents: %d\n", watched[0].revents);
+        //printf("poll() returned: %d\n", retval);
+        //printf("poll's revents: %d\n", watched[0].revents);
 
         for(int i = 0; i < nfds; i++) {
-            printf("checking poll results; i=%d\n", i);
+            //printf("checking poll results; i=%d\n", i);
             short revents = watched[i].revents;
 
             if (revents & POLLERR) {
@@ -396,7 +396,7 @@ runloop_start(void) {
                 }
 
                 if (revents & POLLOUT) {
-                    printf("Got POLLOUT\n");
+                    //printf("Got POLLOUT\n");
                     if (vserial->send_buffer == NULL) {
                         // tell the driver that it can add
                         // some data to the send buffer
@@ -415,12 +415,12 @@ runloop_start(void) {
                         ssize_t retval = write(fd, vserial->send_buffer, write_size);
 
                         if (retval == -1) {
-                            util_fatal_perror("Could not write(): ");
+                            log_fatal("Could not write(): %m");
                         }
 
-                        printf("Wrote %ld bytes; send_buffer_size = %ld\n", retval, vserial->send_buffer_size);
+                        //printf("Wrote %ld bytes; send_buffer_size = %ld\n", retval, vserial->send_buffer_size);
                         vserial->send_buffer_size -= retval;
-                        printf("New send_buffer_size: %ld\n", vserial->send_buffer_size);
+                        //printf("New send_buffer_size: %ld\n", vserial->send_buffer_size);
 
                         if (vserial->send_buffer_size < 0) {
                             log_fatal("send_buffer_size < 0: %d", vserial->send_buffer_size);
@@ -436,13 +436,13 @@ runloop_start(void) {
                 }
 
                 if (revents & (POLLIN | POLLPRI)) {
-                    printf("got POLLIN\n");
+                    //printf("got POLLIN\n");
                     ssize_t retval = read(fd, read_buf, CONFIG_READ_SIZE);
                     if (retval == -1) {
-                        util_fatal_perror("Could not read from fd:");
+                        log_fatal("Could not read from fd: %m");
                     }
 
-                    printf("Read %ld bytes\n", retval);
+                    //printf("Read %ld bytes\n", retval);
 
                     if (retval >= 1) {
                         uint8_t packet_type = read_buf[0];
@@ -451,19 +451,19 @@ runloop_start(void) {
                             // only send the data, skip the status byte
                             vserial_call_recv_data_handler(vserial, read_buf + 1, retval - 1);
                         } else {
-                            printf("Packet type: %u\n", packet_type);
+                            //printf("Packet type: %u\n", packet_type);
                         }
 
                         // FIXME move to a handler implemented in vserial.c that
                         // takes a VSERIAL *
                         if (packet_type & TIOCPKT_IOCTL) {
-                            printf("should call a speed handler but can't\n");
+                            //printf("should call a speed handler but can't\n");
                         }
 
                         // FIXME move to a handler implemented in vserial.c that
                         // takes a VSERIAL *
                         if (packet_type & TIOCPKT_MSET) {
-                            printf("Calling control line handler\n");
+                            //printf("Calling control line handler\n");
                             vserial_call_control_line_handler(vserial);
                         }
                     }
@@ -471,7 +471,7 @@ runloop_start(void) {
             }
         }
 
-        printf("\n");
+        //printf("\n");
     }
 
     alarm(0);

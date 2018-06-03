@@ -65,7 +65,7 @@ main(int argc, char **argv) {
     const char *name = configfile_gets_section_key(section_name, "io.port");
     VSERIAL *vserial = vserial_create(name);
 
-    printf("Fake serial device name: %s\n", vserial_get_name(vserial));
+    log_info("Fake serial device name: %s", vserial_get_name(vserial));
     runloop_add_vserial(vserial);
 
     struct driver_info *driver = ptt_driver_info();
@@ -75,7 +75,7 @@ main(int argc, char **argv) {
         driver->init(vserial, section_name);
     }
 
-    printf("We are good: starting runloop\n");
+    log_info("We are good: starting runloop");
 
     runloop_start();
 

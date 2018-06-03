@@ -74,17 +74,17 @@ vserial_create(const char *name_arg) {
     int nonzero = 1;
 
     if (openpty(master, slave, slave_path, NULL, NULL)) {
-        util_fatal_perror("could not openpty(): ");
+        log_fatal("could not openpty(): %m");
     }
 
     // packet mode enables delivery of status information
     // about the slave to the master
     if(ioctl(*master, TIOCPKT, &nonzero) == -1) {
-        util_fatal_perror("could not ioctl()");
+        log_fatal("could not ioctl(): %m");
     }
 
     if (tcgetattr(*master, master_terminfo)) {
-        util_fatal_perror("could not tcgettr()");
+        log_fatal("could not tcgettr(): %m");
     }
 
     // EXTPROC causes an event whenever tcsetattr() is called
@@ -92,7 +92,7 @@ vserial_create(const char *name_arg) {
     master_terminfo->c_lflag |= EXTPROC;
 
     if (tcsetattr(*master, TCSANOW, master_terminfo)) {
-        util_fatal_perror("could not tcsetattr()");
+        log_fatal("could not tcsetattr(): %m");
     }
 
     if (name_arg == NULL) {
@@ -177,10 +177,10 @@ vserial_call_control_line_handler(VSERIAL *vserial) {
         return;
     }
 
-    printf("the slave FD is %d\n", slave_fd);
+    log_debug("the slave FD is %d", slave_fd);
 
     if (ioctl(slave_fd, TIOCMGET, &modem_bits) == -1) {
-        util_fatal_perror("Could not ioctl(TIOCMGET): ");
+        log_fatal("Could not ioctl(TIOCMGET): %m");
     }
 
     control_lines.cts = modem_bits & TIOCM_CTS;
@@ -231,13 +231,11 @@ vserial_manage_symlink(const char *target, UNUSED const char *pty_slave) {
     struct stat target_info;
     bool create_link = false;
 
-    printf("vserial_manage_symlink(): here we are\n");
-
     if (lstat(target, &target_info)) {
         if (errno == ENOENT) {
             create_link = true;
         } else {
-            util_fatal_perror("could not lstat(%s): ", target);
+            log_fatal("could not lstat(%s): %m", target);
         }
     } else if (target_info.st_mode & S_IFLNK) {
         // the desired target is already a symlink
@@ -247,14 +245,14 @@ vserial_manage_symlink(const char *target, UNUSED const char *pty_slave) {
         // it work then???
         ssize_t read = readlink(target, links_to, PATH_MAX);
         if (read == -1) {
-            util_fatal_perror("could not readlink(%s): ", target);
+            log_fatal("could not readlink(%s): %m", target);
         }
 
-        printf("  symlink: %s -> %s\n", target, links_to);
+        log_debug("symlink %s -> %s", target, links_to);
         if (strcmp(pty_slave, links_to)) {
-            printf("  symlink: need to update to point at %s\n", pty_slave);
+            log_debug("  symlink: need to update to point at %s", pty_slave);
             if(unlink(target)) {
-                util_fatal_perror("could not unlink(%s): ", target);
+                log_fatal("could not unlink(%s): %m", target);
             }
             create_link = true;
         }
@@ -263,9 +261,9 @@ vserial_manage_symlink(const char *target, UNUSED const char *pty_slave) {
     }
 
     if (create_link) {
-        printf("Creating symlink: %s -> %s\n", pty_slave, target);
+        log_debug("Creating symlink: %s -> %s\n", pty_slave, target);
         if (symlink(pty_slave, target)) {
-            util_fatal_perror("could not symlink(%s, %s): ", pty_slave, target);
+            log_fatal("could not symlink(%s, %s): %m", pty_slave, target);
         }
     }
 }

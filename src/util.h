@@ -33,7 +33,4 @@ void * util_memdup(void *, size_t);
 char * util_strdup(const char *);
 char * util_strndup(const char *, size_t);
 
-void util_fatal(char *, ...);
-void util_fatal_perror(char *fmt, ...);
-
 #endif /* SRC_UTIL_H_ */
