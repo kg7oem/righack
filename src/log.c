@@ -27,6 +27,7 @@
 #include "guts.h"
 #include "log.h"
 #include "types.h"
+#include "util.h"
 
 enum log_level current_level = log_level_debug;
 
@@ -106,35 +107,29 @@ log__level(UNUSED enum log_level level, const char *function, const char *path, 
 
 void
 log__level_exit(UNUSED enum log_level level, const char *function, const char *path, int line, const char *fmt, ...) {
-    if (level < current_level) {
-        return;
-    }
-
-    const char *file = log_basename(path);
     static TLOCAL char *message_buf = NULL;
-    const char *level_name = log_levelname(level);
+    FILE *output = stdout;
     va_list args;
 
     if (message_buf == NULL) {
-        // don't use the project memory management
-        // to avoid bootstrap issues
-        message_buf = malloc(CONFIG_LOG_SIZE);
-        if (message_buf == NULL) {
-            perror("could not malloc: ");
-            guts_exit(exit_nomem);
+        message_buf = ad_malloc(CONFIG_LOG_SIZE);
+    }
+
+    if (level >= current_level) {
+        const char *file = log_basename(path);
+        const char *level_name = log_levelname(level);
+
+        va_start(args, fmt);
+        // FIXME detect when the message does not fit
+        vsnprintf(message_buf, CONFIG_LOG_SIZE, fmt, args);
+        va_end(args);
+
+        if (level >= log_level_warn) {
+            output = stderr;
         }
+
+        fprintf(output, "%s %s:%d %s() %s\n", level_name, file, line, function, message_buf);
     }
 
-    va_start(args, fmt);
-    // FIXME detect when the message does not fit
-    vsnprintf(message_buf, CONFIG_LOG_SIZE, fmt, args);
-    va_end(args);
-
-    FILE *output = stdout;
-    if (level >= log_level_warn) {
-        output = stderr;
-    }
-
-    fprintf(output, "%s %s:%d %s() %s\n", level_name, file, line, function, message_buf);
     guts_exit(exit_fatal);
 }
