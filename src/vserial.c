@@ -21,7 +21,6 @@
 
 #include <errno.h>
 #include <fcntl.h>
-#include <pty.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -31,6 +30,13 @@
 #include <termios.h>
 #include <unistd.h>
 #include <limits.h>
+
+#ifdef HAVE_PTY_H
+# include <pty.h>
+#endif
+#ifdef HAVE_UTIL_H
+# include <util.h>
+#endif
 
 #include "log.h"
 #include "types.h"
