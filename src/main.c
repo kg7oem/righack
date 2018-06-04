@@ -20,6 +20,7 @@
  */
 
 #include <errno.h>
+#include <hamlib/rig.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -31,6 +32,46 @@
 #include "runloop.h"
 #include "util.h"
 #include "vserial.h"
+
+static int
+hamlib_debug_handler(enum rig_debug_level_e debug_level, UNUSED rig_ptr_t user_data, UNUSED const char *fmt, UNUSED va_list args) {
+    enum log_level log_at = log_level_fatal;
+
+    switch(debug_level) {
+    case RIG_DEBUG_NONE:
+        log_at = log_level_trace;
+        break;
+    case RIG_DEBUG_BUG:
+    case RIG_DEBUG_ERR:
+        log_at = log_level_error;
+        break;
+    case RIG_DEBUG_WARN:
+        log_at = log_level_warn;
+        break;
+    case RIG_DEBUG_VERBOSE:
+        log_at = log_level_verbose;
+        break;
+    case RIG_DEBUG_TRACE:
+        log_at = log_level_trace;
+        break;
+    }
+
+    if (log_at < log_get_current_level()) {
+        return RIG_OK;
+    }
+
+    // remove the trailing new line from the hamlib messages
+    char *new_fmt = ad_strdup(fmt);
+    size_t len = strlen(new_fmt);
+    if (new_fmt[len - 1] == '\n') {
+        new_fmt[len - 1] = 0;
+    }
+
+    log__level_args(log_source_hamlib, log_at, NULL, NULL, -1, new_fmt, args);
+    free(new_fmt);
+
+    return RIG_OK;
+}
 
 static void
 autodie_handler(const char *function, int error, const char *message) {
@@ -52,6 +93,7 @@ autodie_handler(const char *function, int error, const char *message) {
 void
 bootstrap(void) {
     autodie_register_handler(autodie_handler);
+    rig_set_debug_callback(hamlib_debug_handler, NULL);
 }
 
 int
@@ -59,8 +101,6 @@ main(int argc, char **argv) {
     bootstrap();
 
     log_info("main just started");
-
-    util_fatal("The Cheat is GROUNDED! Because of: %s", "reasons");
 
     if (argc != 2) {
         log_fatal("Usage: specify exactly one config file as an argument");

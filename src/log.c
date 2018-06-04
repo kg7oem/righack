@@ -29,13 +29,27 @@
 #include "types.h"
 #include "util.h"
 
-enum log_level current_level = log_level_debug;
+enum log_level current_level = log_level_info;
+
+enum log_level
+log_get_current_level(void) {
+    return current_level;
+}
+
+enum log_level
+log_set_current_level(enum log_level new_level) {
+    enum log_level old_level = current_level;
+    current_level = new_level;
+    return old_level;
+}
 
 const char *
 log_levelname(enum log_level level) {
     switch (level) {
     case log_level_fatal:
         return "FATAL";
+    case log_level_error:
+        return "ERROR";
     case log_level_warn:
         return "WARN";
     case log_level_notice:
@@ -102,6 +116,14 @@ void log__level_args(enum log_source source, UNUSED enum log_level level, const 
         output = stderr;
     }
 
+    if (path == NULL) {
+        path = "(no file)";
+    }
+
+    if (function == NULL) {
+        function = "(no func)";
+    }
+
     const char *file = log_basename(path);
     const char *level_name = log_levelname(level);
     const char *source_name = log_sourcename(source);
@@ -112,8 +134,6 @@ void log__level_args(enum log_source source, UNUSED enum log_level level, const 
     fprintf(output, "%s %s %s:%d %s() %s\n", source_name, level_name, file, line, function, message_buf);
 }
 
-// FIXME figure out how to get the common parts of the log__level* functions
-// into their own functions
 void
 log__level_va(enum log_source source, enum log_level level, const char *function, const char *path, int line, const char *fmt, ...) {
     if (level < current_level) {

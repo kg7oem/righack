@@ -24,6 +24,7 @@
 
 enum log_level {
     log_level_fatal = 100,  // execution will stop
+    log_level_error = 8,
     log_level_warn = 7,     // output to stderr
     log_level_notice = 6,   // show to user even if quiet is on
     log_level_info = 5,     // show to user by default
@@ -38,6 +39,9 @@ enum log_source {
     log_source_righack,
     log_source_hamlib,
 };
+
+enum log_level log_get_current_level(void);
+enum log_level log_set_current_level(enum log_level);
 
 #define log_fatal(...) log__level_va(log_source_righack, log_level_fatal, __func__, __FILE__, __LINE__, __VA_ARGS__)
 #define log_warn(...) log__level_va(log_source_righack, log_level_warn, __func__, __FILE__, __LINE__, __VA_ARGS__)

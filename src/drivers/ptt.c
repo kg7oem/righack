@@ -33,11 +33,6 @@ struct ptt_context {
     RIG *rig;
 };
 
-//int
-//ptt_hamlib_debug_handler(enum rig_debug_level_e debug_level, rig_ptr_t user_data, const char *fmt, va_list ap) {
-//
-//}
-
 static void
 ptt_init_handler(UNUSED VSERIAL *vserial, const char *name) {
     struct ptt_context *context = util_zalloc(sizeof(struct ptt_context));
