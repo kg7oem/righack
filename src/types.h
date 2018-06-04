@@ -23,6 +23,7 @@
 #define SRC_TYPES_H_
 
 #define UNUSED __attribute__((unused))
+#define NORETURN __attribute__((noreturn))
 #define TLOCAL __thread
 
 #endif /* SRC_TYPES_H_ */
