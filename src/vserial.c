@@ -239,15 +239,10 @@ vserial_manage_symlink(const char *target, UNUSED const char *pty_slave) {
         }
     } else if (target_info.st_mode & S_IFLNK) {
         // the desired target is already a symlink
-        char links_to[PATH_MAX];
-        // FIXME readlink() man page says it does not add a terminating
-        // NULL but is that true? This could be bad if so - also why does
-        // it work then???
-        ssize_t read = readlink(target, links_to, PATH_MAX);
-        if (read == -1) {
-            util_fatal("could not readlink(%s): %m", target);
+        const char *links_to = util_get_link_target(target);
+        if (links_to == NULL) {
+            util_fatal("could not get target of %s: %m", target);
         }
-
         log_debug("symlink %s -> %s", target, links_to);
         if (strcmp(pty_slave, links_to)) {
             log_debug("  symlink: need to update to point at %s", pty_slave);

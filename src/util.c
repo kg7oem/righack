@@ -20,10 +20,12 @@
  */
 
 #include <errno.h>
+#include <linux/limits.h>
 #include <stdarg.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <unistd.h>
 
 #include "log.h"
 #include "guts.h"
@@ -80,4 +82,19 @@ util_memdup(void *p, size_t len) {
     void *ret = util_zalloc(len);
     memcpy(ret, p, len);
     return ret;
+}
+
+const char *
+util_get_link_target(const char *path) {
+    static TLOCAL char target[PATH_MAX + 1];
+    ssize_t size = readlink(path, target, PATH_MAX);
+
+    if (size < 0) {
+        return NULL;
+    }
+
+    // readlink does not add a terminating NULL
+    target[size] = 0;
+
+    return target;
 }
