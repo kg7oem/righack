@@ -93,12 +93,15 @@ autodie_handler(const char *function, int error, const char *message) {
 void
 bootstrap(void) {
     autodie_register_handler(autodie_handler);
+    rig_set_debug(RIG_DEBUG_WARN);
     rig_set_debug_callback(hamlib_debug_handler, NULL);
 }
 
 int
 main(int argc, char **argv) {
     bootstrap();
+
+    log_set_current_level(log_level_debug);
 
     log_info("main just started");
 
