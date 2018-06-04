@@ -40,11 +40,11 @@ ptt_init_handler(UNUSED VSERIAL *vserial, const char *name) {
     ptt_t ptt_state;
     int ret;
 
-    log_debug("  Inside ptt_init_handler; my name = '%s'", name);
+    log_debug("Inside ptt_init_handler; my name = '%s'", name);
 
     RIG *rig = rig_init(rigid);
     if (! rig) {
-        util_fatal("could not rig_init(%d)\n", rigid);
+        util_fatal("could not rig_init(%d)", rigid);
     }
 
     strncpy(
@@ -55,25 +55,27 @@ ptt_init_handler(UNUSED VSERIAL *vserial, const char *name) {
 
     ret = rig_open(rig);
     if (ret != RIG_OK) {
-        util_fatal("Could not rig_open(): %s\n", rigerror(ret));
+        util_fatal("Could not rig_open(): %s", rigerror(ret));
     }
 
     log_lots("Opened rig!");
 
     ret = rig_get_ptt(rig, RIG_VFO_CURR, &ptt_state);
     if (ret != RIG_OK) {
-        util_fatal("could not get PTT state: %s\n", rigerror(ret));
+        util_fatal("could not get PTT state: %s", rigerror(ret));
     }
 
     context->rig = rig;
 
     vserial_set_context(vserial, context);
+
+    log_debug("initialization complete");
 }
 
 static void
 ptt_cleanup_handler(UNUSED VSERIAL *vserial) {
     struct ptt_context *context = vserial_get_context(vserial);
-    log_lots("  Inside ptt_cleanup_handler\n");
+    log_lots("Inside ptt_cleanup_handler");
 
     rig_close(context->rig);
     rig_cleanup(context->rig);
@@ -83,7 +85,7 @@ ptt_cleanup_handler(UNUSED VSERIAL *vserial) {
 static void
 ptt_control_line_handler(UNUSED VSERIAL *vserial, UNUSED struct vserial_control_line *control_line) {
     struct ptt_context *context = vserial_get_context(vserial);
-    log_lots("  Inside ptt_control_line_handler\n");
+    log_lots("  Inside ptt_control_line_handler");
     ptt_t ptt_state = RIG_PTT_OFF;
     int ret;
 
@@ -93,7 +95,13 @@ ptt_control_line_handler(UNUSED VSERIAL *vserial, UNUSED struct vserial_control_
 
     ret = rig_set_ptt(context->rig, RIG_VFO_CURR, ptt_state);
     if (ret != RIG_OK) {
-        util_fatal("Could not set transmit: %s\n", rigerror(ret));
+        util_fatal("Could not set transmit: %s", rigerror(ret));
+    }
+
+    if (ptt_state == RIG_PTT_ON) {
+        log_info("Starting to transmit");
+    } else {
+        log_info("Done transmitting");
     }
 }
 
