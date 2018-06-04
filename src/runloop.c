@@ -21,8 +21,7 @@
 
 #define _GNU_SOURCE
 
-// FIXME this include can't be right
-#include <asm-generic/ioctls.h>
+#include <sys/ioctl.h>
 #include <errno.h>
 #include <inttypes.h>
 #include <poll.h>

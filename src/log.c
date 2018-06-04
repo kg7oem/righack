@@ -29,7 +29,7 @@
 #include "types.h"
 #include "util.h"
 
-enum log_level current_level = log_level_info;
+static enum log_level current_level = log_level_info;
 
 enum log_level
 log_get_current_level(void) {

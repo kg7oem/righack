@@ -27,8 +27,6 @@
 // FIXME for size_t
 #include <stdlib.h>
 
-#include "runloop.h"
-
 // VSERIAL * is supposed to be an opaque handle and the vserial interface
 // isn't tied to POSIX so this could in theory work on Windows
 struct vserial_t;

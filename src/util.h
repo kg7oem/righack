@@ -22,15 +22,13 @@
 #ifndef SRC_UTIL_H_
 #define SRC_UTIL_H_
 
-// FIXME is there a better include for this?
-#include <linux/types.h>
 #include <pthread.h>
 
 #include "external/autodie.h"
 #include "types.h"
 
 #define util_fatal(...) util__fatal_va(log_source_righack, log_level_fatal, __func__, __FILE__, __LINE__, __VA_ARGS__)
-void util__fatal_va(enum log_source, enum log_level, const char *, const char *, int, const char *, ...);
+void util__fatal_va(enum log_source, enum log_level, const char *, const char *, int, const char *, ...) NORETURN;
 
 void * util_zalloc(size_t);
 void * util_memdup(void *, size_t);

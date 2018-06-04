@@ -69,7 +69,7 @@ configfile_get_section_count(void) {
 
 
     const char *p;
-    int i;
+    int i = 0;
     while((p = configfile_get_section_name(i))) {
         i++;
     }
