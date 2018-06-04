@@ -6,6 +6,14 @@ any other communication with me there will be no attempt to avoid
 breaking others.
 
 
+FEATURES
+
+Right now righack can (with a patched Linux kernel, see below) setup a virtual
+serial port and when another program connects to that serial port and adjusts
+the RTS flow control line toggle the PTT state of a radio by using hamlib. This
+is essentially the same thing as CAT7200 (http://www.cantab.net/users/john.wiseman/Documents/CAT7200.html)
+but for Linux instead of Windows.
+
 KERNEL PATCHING
 
 Righack can offer a virtual serial port via pseudoterminals but changes to the
