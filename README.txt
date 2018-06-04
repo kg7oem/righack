@@ -26,7 +26,7 @@ This software is being created by Tyler Riddle KG7OEM <cardboardaardvark@gmail.c
 The current license is GPL3 but I'm not sure I will stick with it in the long
 term. Contributions are welcome but any patch submitted for inclusion in the
 project must include a statement that a future license change is ok. See
-doc/CONTRIBUTING.txt for information.
+doc/contributing.txt for information.
 
 This project includes some third party software that is licensed under
 different terms. This software may include local modifications. See the

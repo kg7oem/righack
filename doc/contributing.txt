@@ -28,7 +28,7 @@ must include a file that confirms you agree with the terms of the contributor
 agreement. Please include this file, as described below, along with the rest
 of the contents of your change in a single patch.
 
-Copy the contents of this file (CONTRIBUTING.txt) to contributors/<your email>
+Copy the contents of this file (contributing.txt) to contributors/<your email>
 and fill out your name and email address in the CONTRIBUTOR AGREEMENT section
 at the bottom. See the contributors/ directory for existing examples.
 
