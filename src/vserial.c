@@ -21,7 +21,6 @@
 
 #include <errno.h>
 #include <fcntl.h>
-#include <linux/limits.h>
 #include <pty.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -31,12 +30,14 @@
 #include <sys/types.h>
 #include <termios.h>
 #include <unistd.h>
+#include <limits.h>
 
 #include "log.h"
 #include "types.h"
 #include "util.h"
 #include "vserial.h"
 #include "vserial-private.h"
+#include "runloop.h"
 
 static void vserial_manage_symlink(const char *, const char *);
 

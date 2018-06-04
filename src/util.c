@@ -20,12 +20,12 @@
  */
 
 #include <errno.h>
-#include <linux/limits.h>
 #include <stdarg.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
+#include <limits.h>
 
 #include "log.h"
 #include "guts.h"

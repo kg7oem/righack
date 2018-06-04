@@ -24,8 +24,7 @@
 
 #include <stdbool.h>
 
-struct vserial_t;
-typedef struct vserial_t VSERIAL;
+#include "vserial.h"
 
 int runloop_start(void);
 void runloop_add_vserial(VSERIAL *);

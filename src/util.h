@@ -22,8 +22,6 @@
 #ifndef SRC_UTIL_H_
 #define SRC_UTIL_H_
 
-// FIXME is there a better include for this?
-#include <linux/types.h>
 #include <pthread.h>
 
 #include "external/autodie.h"
