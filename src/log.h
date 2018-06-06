@@ -22,6 +22,8 @@
 #ifndef SRC_LOG_H_
 #define SRC_LOG_H_
 
+#include <stdarg.h>
+
 enum log_level {
     log_level_fatal = 100,  // execution will stop
     log_level_error = 8,

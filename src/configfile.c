@@ -32,7 +32,7 @@
 toml_table_t* toml_root;
 
 void
-configfile_load(char *path) {
+configfile_load(const char *path) {
     char error[1024];
     FILE *fh;
 
@@ -67,9 +67,8 @@ int
 configfile_get_section_count(void) {
     configfile_guard();
 
-
     const char *p;
-    int i;
+    int i = 0;
     while((p = configfile_get_section_name(i))) {
         i++;
     }
@@ -162,24 +161,3 @@ configfile_rgeti_section_key(const char *section, const char *key) {
 
     return result;
 }
-
-// FIXME untested
-//const char **
-//configfile_get_section_names(void) {
-//    configfile_guard();
-//
-//    static TLOCAL const char **list = NULL;
-//    int num_sections = configfile_get_section_count();
-//
-//    if (list != NULL) {
-//        free(list);
-//    }
-//
-//    list = util_zalloc(sizeof(const char *) * (num_sections + 1));
-//
-//    for(int i = 0; i < num_sections; i++) {
-//        list[i] = configfile_get_section_name(i);
-//    }
-//
-//    return list;
-//}

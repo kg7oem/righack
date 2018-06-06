@@ -25,13 +25,13 @@
 #include <inttypes.h>
 #include <stdbool.h>
 
-void configfile_load(char *);
+void configfile_load(const char *);
 
 int configfile_count_vserial(void);
 const char * configfile_get_vserial_name(int);
 const char * configfile_get_vserial_driver(int);
 
-
+int configfile_get_section_count(void);
 const char * configfile_get_section_name(int);
 const char * configfile_gets_section_key(const char *, const char *);
 const char * configfile_rgets_section_key(const char *, const char *);

@@ -25,8 +25,10 @@
 // FIXME is there a better include for this?
 #include <linux/types.h>
 #include <pthread.h>
+#include <stdarg.h>
 
 #include "external/autodie.h"
+#include "log.h"
 #include "types.h"
 
 #define util_fatal(...) util__fatal_va(log_source_righack, log_level_fatal, __func__, __FILE__, __LINE__, __VA_ARGS__)

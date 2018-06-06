@@ -28,7 +28,9 @@
 #include "configfile.h"
 #include "drivers.h"
 #include "guts.h"
+#include "interface.h"
 #include "log.h"
+#include "module.h"
 #include "runloop.h"
 #include "util.h"
 #include "vserial.h"
@@ -93,68 +95,52 @@ autodie_handler(const char *function, int error, const char *message) {
 void
 bootstrap(void) {
     autodie_register_handler(autodie_handler);
+
     rig_set_debug(RIG_DEBUG_WARN);
     rig_set_debug_callback(hamlib_debug_handler, NULL);
+
+    module_bootstrap();
+}
+
+void
+handle_config_section(const char *section) {
+    const char *module_name = configfile_rgets_section_key(section, "module.name");
+
+    log_debug("config section '%s' module.name = '%s'", section, module_name);
+    struct module_info *new_module_info = module_get_info(module_name);
+
+    if (new_module_info == NULL) {
+        util_fatal("could not find module implementation for '%s'", module_name);
+    }
+
+    if (module_start(new_module_info, section) == NULL) {
+        util_fatal("Could not start module '%s'");
+    }
 }
 
 int
-main(int argc, char **argv) {
+main(UNUSED int argc, UNUSED char **argv) {
     bootstrap();
 
     log_set_current_level(log_level_debug);
 
-    log_info("main just started");
+    log_info("righack is starting");
 
     if (argc != 2) {
-        log_fatal("Usage: specify exactly one config file as an argument");
-        guts_exit(exit_args);
+        util_fatal("usage: specify exactly one config file");
     }
 
-    char *config_file = argv[1];
-    log_info("Loading configuration file: %s", config_file);
-    configfile_load(argv[1]);
+    const char *config_file = argv[1];
+    log_debug("loading configuration from %s", config_file);
 
-    const char *section_name;
-    for(int i = 0; (section_name = configfile_get_section_name(i)); i++) {
-        log_debug("config section #%d: %s", i, section_name);
+    configfile_load(config_file);
+    int num_sections = configfile_get_section_count();
+    for(int i = 0; i < num_sections; i++) {
+        const char *section_name = configfile_get_section_name(i);
+        handle_config_section(section_name);
     }
 
-    section_name = configfile_get_section_name(0);
-    const char *p;
+    module_stop_all();
 
-    p = configfile_rgets_section_key(section_name, "driver.type");
-    if (strcmp(p, "ptt")) {
-        util_fatal("only the ptt driver type is supported, not '%s'\n", p);
-    }
-
-    p = configfile_rgets_section_key(section_name, "io.type");
-    if (strcmp(p, "vserial")) {
-        util_fatal("only the vserial io type is supported, not '%s'\n", p);
-    }
-
-    const char *name = configfile_gets_section_key(section_name, "io.port");
-    VSERIAL *vserial = vserial_create(name);
-
-    log_info("Fake serial device name: %s", vserial_get_name(vserial));
-    runloop_add_vserial(vserial);
-
-    struct driver_info *driver = ptt_driver_info();
-    vserial_set_handlers(vserial, &driver->vserial);
-
-    if (driver->init != NULL) {
-        driver->init(vserial, section_name);
-    }
-
-    log_info("We are good: starting runloop");
-
-    runloop_start();
-
-    if (driver->cleanup) {
-        driver->cleanup(vserial);
-    }
-
-    vserial_destroy(vserial);
-    free(driver);
-
-    exit(0);
+    guts_exit(exit_ok);
 }
