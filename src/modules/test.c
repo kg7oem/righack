@@ -21,10 +21,12 @@
 
 #include <stdlib.h>
 
+#include "../driver.h"
 #include "../external/autodie.h"
 #include "../log.h"
 #include "test.h"
 #include "../types.h"
+#include "../util.h"
 
 #define MODULE_NAME "test"
 
@@ -40,14 +42,25 @@ test_start_handler(UNUSED const char *config_name) {
     new_module->label = config_name;
     new_module->info = module_get_info(MODULE_NAME);
 
-    log_info("test module started");
+    struct driver *vserial = driver_create("vserial");
+    if (vserial == NULL) {
+        util_fatal("could not create instance of vserial driver");
+    }
+
+    new_module->private = vserial;
+
+    log_info("test module started: '%s", config_name);
 
     return new_module;
 }
 
 enum module_status
 test_stop_handler(UNUSED struct module *info) {
+    struct driver *vserial = info->private;
     log_debug("test module stopping");
+
+    driver_destroy(vserial, NULL);
+
     return module_ok;
 }
 

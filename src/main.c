@@ -26,9 +26,8 @@
 #include <string.h>
 
 #include "configfile.h"
-#include "drivers.h"
+#include "driver.h"
 #include "guts.h"
-#include "interface.h"
 #include "log.h"
 #include "module.h"
 #include "runloop.h"
@@ -136,16 +135,16 @@ bootstrap(void) {
     rig_set_debug_callback(hamlib_debug_handler, NULL);
 
     runloop_bootstrap();
+    driver_bootstrap();
     module_bootstrap();
 }
 
 int
 main(UNUSED int argc, UNUSED char **argv) {
-    bootstrap();
-
     log_set_current_level(log_level_trace);
-
     log_info("righack is starting");
+
+    bootstrap();
 
     if (argc != 2) {
         util_fatal("usage: specify exactly one config file");

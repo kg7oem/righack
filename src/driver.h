@@ -19,18 +19,100 @@
  *
  */
 
+/*
+ * Drivers add support for things like serial ports, TCP/IP sockets, etc.
+ *
+ * To keep implementation details for the drivers away from users of the
+ * drivers there is a set of driver interfaces which are defined here.
+ *
+ * Every interface has a name and a structure that describes the interface
+ * operations and callbacks. Operations are functions that the user of a driver
+ * can invoke and callbacks are handlers for events that the driver will invoke
+ * as needed. Operations and callbacks are all function pointers. The operation
+ * pointers are filled out by the driver during instantiation and the callbacks
+ * are filled out by the user to register event handlers.
+ *
+ * For example there is a structure named interface_stream and
+ * another one named interface_rs232.
+ *
+ * Every interface that exists in the system also has a member in a structure
+ * called interface. The member for each interface is a pointer to the structure
+ * for that interface. When a driver is being setup it will allocate a interface
+ * structure and populate the pointers for the interface that it implements then
+ * return this pointer to what ever function is instantiating the driver.
+ *
+ * Support for an interface is defined as having a non-null pointer for the
+ * interface in the interface structure. Support for an operation is indicated
+ * by a non-full function pointer in the operations structure.
+ *
+ * This allows each driver to implement one or more interfaces
+ *
+ */
+
 #ifndef SRC_DRIVER_H_
 #define SRC_DRIVER_H_
 
-#include "vserial.h"
+#include <inttypes.h>
 
-typedef void (*driver_init_handler)(VSERIAL *, const char *);
-typedef void (*driver_cleanup_handler)(VSERIAL *);
+#define DRIVER_CALL(driver, operation, ...) driver->interface.op.operation(driver, __VA_ARGS__);
+
+struct driver;
+
+typedef void (*driver_create_handler)(struct driver *);
+typedef void (*driver_destroy_handler)(struct driver *);
+typedef void (*driver_cb)(struct driver *);
+typedef void (*driver_stream_terminate_op)(struct driver *);
+typedef uint32_t (*driver_stream_get_mask_op)(struct driver *);
+typedef void (*driver_stream_set_mask_op)(struct driver *, uint32_t);
+typedef void (*driver_stream_clear_mask_op)(struct driver *, uint32_t);
+
+struct driver_stream_int {
+    // these are events which indicate that something already happened
+    // so the names are passed tense adjectives
+    struct {
+        driver_cb opened;
+        driver_cb closed;
+        driver_cb faulted;
+        driver_cb received; // data has been read and is available
+        driver_cb drained; // there is room in the output buffer
+    } cb;
+
+    // these are operations that will do something so the names
+    // are verbs or start with a verb
+    const struct {
+        driver_stream_terminate_op terminate;
+        // control notifications for events based on a bitmask
+        driver_stream_get_mask_op get_mask;
+        driver_stream_clear_mask_op clear_mask;
+        driver_stream_set_mask_op set_mask;
+    } op;
+};
+
+struct driver_message_int;
+struct driver_rs232_int;
+
+struct interface {
+    const struct driver_stream_int *stream;
+    const struct driver_message_int *message;
+    const struct driver_rs232_int *rs232;
+};
 
 struct driver_info {
-    struct vserial_handlers vserial;
-    driver_init_handler init;
-    driver_cleanup_handler cleanup;
+    const char *name;
+    const struct interface interface;
+    driver_create_handler create;
+    driver_destroy_handler destroy;
 };
+
+struct driver {
+    void *private;
+    const struct driver_info *info;
+};
+
+struct driver * driver_create(const char *);
+void driver_bootstrap(void);
+const struct driver_info * driver_get_info(const char *);
+void driver_destroy(struct driver *, void *notify_cb);
+
 
 #endif /* SRC_DRIVER_H_ */

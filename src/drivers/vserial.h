@@ -1,7 +1,7 @@
 /*
- * drivers.h
+ * vserial.h
  *
- *  Created on: Jun 2, 2018
+ *  Created on: Jun 6, 2018
  *      Author: tyler
  *
  * This program is free software: you can redistribute it and/or modify
@@ -19,9 +19,11 @@
  *
  */
 
-#ifndef DRIVERS_H_
-#define DRIVERS_H_
+#ifndef SRC_DRIVERS_VSERIAL_H_
+#define SRC_DRIVERS_VSERIAL_H_
 
-#include "drivers/vserial.h"
+#include "../driver.h"
 
-#endif /* DRIVERS_H_ */
+const struct driver_info * vserial_driver_info(void);
+
+#endif /* SRC_DRIVERS_VSERIAL_H_ */
