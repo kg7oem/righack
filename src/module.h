@@ -34,7 +34,7 @@ struct module_info;
 struct module {
     const char *label;
     void *private;
-    struct module_info *info;
+    const struct module_info *info;
 };
 
 typedef enum module_status (*module_init_handler)(void);
@@ -52,9 +52,9 @@ struct module_info {
 };
 
 void module_bootstrap(void);
-struct module_info * module_get_info(const char *name);
+const struct module_info * module_get_info(const char *name);
 
-struct module * module_start(struct module_info *, const char *);
+struct module * module_start(const struct module_info *, const char *);
 void module_stop_all(void);
 
 #endif /* SRC_MODULE_H_ */

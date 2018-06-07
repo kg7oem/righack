@@ -24,10 +24,11 @@
 #include "external/autodie.h"
 #include "module.h"
 #include "modules.h"
+#include "runloop.h"
 #include "util.h"
 
 struct loaded_module_list {
-    struct module_info *info;
+    const struct module_info *info;
     struct loaded_module_list *next;
 };
 
@@ -39,7 +40,7 @@ struct running_module_list {
 static struct loaded_module_list *loaded_modules = NULL;
 static struct running_module_list *running_modules = NULL;
 
-struct module_info *
+const struct module_info *
 module_get_info(const char *name) {
     struct loaded_module_list *p = loaded_modules;
 
@@ -56,7 +57,7 @@ module_get_info(const char *name) {
     return p->info;
 }
 
-static void module_setup(struct module_info *info) {
+static void module_setup(const struct module_info *info) {
     struct loaded_module_list *orig = loaded_modules;
     struct loaded_module_list *will_add = ad_malloc(sizeof(struct loaded_module_list));
     const char *name = info->name;
@@ -91,9 +92,12 @@ module_bootstrap(void) {
 }
 
 struct module *
-module_start(struct module_info *info, const char *config_section) {
+module_start(const struct module_info *info, const char *config_section) {
+    log_verbose("starting module '%s' for configuration '%s'", info->name, config_section);
+
     struct module *new_module = info->start(config_section);
     struct running_module_list *new_member = ad_malloc(sizeof(struct running_module_list));
+
 
     new_member->next = NULL;
 
@@ -108,6 +112,8 @@ module_start(struct module_info *info, const char *config_section) {
         new_member->next = running_modules;
         running_modules = new_member;
     }
+
+    log_debug("config section '%s' started", config_section);
 
     return new_module;
 }

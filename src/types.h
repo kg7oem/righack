@@ -23,6 +23,17 @@
 #define SRC_TYPES_H_
 
 #define UNUSED __attribute__((unused))
+
+// portable thread local storage - thanks SO!
+// https://stackoverflow.com/questions/18298280/how-to-declare-a-variable-as-thread-local-portably
+#ifdef __GNUC__
 #define TLOCAL __thread
+#elif __STDC_VERSION__ >= 201112L
+#define TLOCAL _Thread_local
+#elif defined(_MSC_VER)
+#define TLOCAL __declspec(thread)
+#else
+#error Cannot define thread_local
+#endif
 
 #endif /* SRC_TYPES_H_ */

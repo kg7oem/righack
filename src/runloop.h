@@ -23,15 +23,24 @@
 #define SRC_RUNLOOP_H_
 
 #include <stdbool.h>
+#include <uv.h>
 
-struct vserial_t;
-typedef struct vserial_t VSERIAL;
+typedef void (*runloop_generic_cb)(void *);
+typedef void (*runloop_stateful_cb)(bool, void *);
 
-int runloop_start(void);
-void runloop_add_vserial(VSERIAL *);
-bool runloop_enable_read(int);
-bool runloop_disable_read(int);
-bool runloop_enable_write(int);
-bool runloop_disable_write(int);
+struct run_once_private;
+
+struct run_once {
+    runloop_stateful_cb cb;
+    void *context;
+    struct run_once_private *private;
+};
+
+void runloop_bootstrap(void);
+bool runloop_run(void);
+void runloop_cleanup(void);
+bool runloop_has_control(void);
 
 #endif /* SRC_RUNLOOP_H_ */
+
+struct run_once runloop_run_once(runloop_stateful_cb, void *);

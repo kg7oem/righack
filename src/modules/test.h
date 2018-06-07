@@ -24,6 +24,6 @@
 
 #include "../module.h"
 
-struct module_info * test_module_info(void);
+const struct module_info * test_module_info(void);
 
 #endif /* SRC_MODULES_TEST_H_ */

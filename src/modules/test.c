@@ -51,14 +51,14 @@ test_stop_handler(UNUSED struct module *info) {
     return module_ok;
 }
 
-struct module_info *
+const struct module_info *
 test_module_info(void) {
-    struct module_info *info = ad_malloc(sizeof(struct module_info));
+    static const struct module_info our_module_info = {
+            .name = MODULE_NAME,
+            .init = test_init_handler,
+            .start = test_start_handler,
+            .stop = test_stop_handler,
+    };
 
-    info->name = MODULE_NAME;
-    info->init = test_init_handler;
-    info->start = test_start_handler;
-    info->stop = test_stop_handler;
-
-    return info;
+    return &our_module_info;
 }

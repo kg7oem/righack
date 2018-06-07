@@ -21,464 +21,169 @@
 
 #define _GNU_SOURCE
 
-// FIXME this include can't be right
-#include <asm-generic/ioctls.h>
-#include <errno.h>
-#include <inttypes.h>
-#include <poll.h>
-#include <signal.h>
-#include <stdio.h>
-#include <string.h>
-#include <sys/ioctl.h>
-#include <unistd.h>
+#include <stdbool.h>
+#include <stdlib.h>
 
-#include "config.h"
-#include "log.h"
+#include "external/autodie.h"
 #include "runloop.h"
 #include "types.h"
 #include "util.h"
-#include "vserial-private.h"
 
-#define TIOCPKT_MSET (1 << 7)
+struct run_once_private {
+    bool should_run;
+    runloop_stateful_cb cb;
+    void *context;
+};
 
-// true if the runloop should be running
-volatile bool should_run = false;
+struct run_once_list {
+    struct run_once_private *run;
+    struct run_once_list *next;
+};
 
-struct {
-    // number of fds in watched
-    int num_fd;
-    // the fd set to poll
-    struct pollfd *watched;
-    // an array where the index is a file descriptor number and the
-    // value is a VSERIAL *
-    VSERIAL * *vserial_lookup;
-    // largest value for a file descriptor that's stored in vserial_lookup
-    int max_fd;
-} watched_descriptors;
+// each thread has their own event loop...
+// this should explode some heads
+static TLOCAL uv_loop_t *thread_loop = NULL;
+
+// if execution is happening with control given
+// to the runloop then this is set true
+static TLOCAL bool in_runloop_context = false;
+
+static TLOCAL struct run_once_list *run_once_queue = NULL;
+static TLOCAL struct run_once_list *run_once_last = NULL;
+static TLOCAL uv_prepare_t *run_once_prepare = NULL;
+static TLOCAL bool run_once_prepare_started = false;
 
 void
-runloop_resize_vserial_lookup(int max_fd) {
-    size_t size = sizeof(VSERIAL *) * (max_fd + 1);
+runloop_bootstrap(void) {
+    log_debug("bootstrapping the runloop");
+    thread_loop = ad_malloc(sizeof(uv_loop_t));
+    uv_loop_init(thread_loop);
 
-    if (watched_descriptors.vserial_lookup == NULL) {
-        watched_descriptors.vserial_lookup = util_zalloc(size);
-        watched_descriptors.max_fd = max_fd;
-    } else if (watched_descriptors.max_fd < max_fd) {
-        size_t copy_bytes = sizeof(VSERIAL *) * (watched_descriptors.max_fd + 1);
-        VSERIAL * *new_lookup = util_zalloc(size);
-        VSERIAL * *old_lookup = watched_descriptors.vserial_lookup;
+    run_once_prepare = ad_malloc(sizeof(uv_prepare_t));
+    uv_prepare_init(thread_loop, run_once_prepare);
+}
 
-        memcpy(new_lookup, old_lookup, copy_bytes);
+static void
+cleanup_handle_cb(uv_handle_t *handle) {
+    free(handle);
 
-        watched_descriptors.vserial_lookup = new_lookup;
-        watched_descriptors.max_fd = max_fd;
+    log_trace("freed a handle");
 
-        free(old_lookup);
+    if (handle == (struct uv_handle_s *)run_once_prepare) {
+        log_trace("setting run_once_prepare to null");
+        run_once_prepare = NULL;
+    }
+}
+
+static void
+walk_runloop_cb(uv_handle_t *handle, UNUSED void *context) {
+    if (! uv_is_closing(handle)) {
+        log_trace("closing handle in runloop walker");
+        uv_close(handle, cleanup_handle_cb);
+    }
+}
+
+void
+runloop_cleanup(void) {
+    if (thread_loop == NULL) {
+        return;
+    }
+
+    log_debug("starting to cleanup the runloop");
+
+    // close any filehandles that are not already closing
+    log_lots("walking the runloop to close needed handles");
+    uv_walk(thread_loop, walk_runloop_cb, NULL);
+
+    // start the runloop back up so it can process all the queued
+    // cleanup callbacks
+    log_debug("starting the runloop again to process the cleanup call backs");
+    uv_run(thread_loop, UV_RUN_DEFAULT);
+    log_debug("out of the runloop now");
+
+    if (uv_loop_close(thread_loop) == UV_EBUSY) {
+        util_fatal("could not cleanup runloop because it was not empty");
+    }
+
+    free(thread_loop);
+    thread_loop = NULL;
+
+    log_lots("runloop is completely cleaned up");
+}
+
+bool
+runloop_run(void) {
+    if (thread_loop == NULL) {
+        util_fatal("runloop_run() called but there was no per thread runloop defined");
+    }
+
+    log_debug("about to give control to runloop");
+    in_runloop_context = true;
+    bool retval = uv_run(thread_loop, UV_RUN_DEFAULT);
+    in_runloop_context = false;
+    log_debug("control from runloop returned; retval = %i", retval);
+
+    return retval;
+}
+
+bool
+runloop_has_control(void) {
+    return in_runloop_context;
+}
+
+void
+run_once_prepare_cb(uv_prepare_t *prepare) {
+    log_trace("Inside the run once prepare handler");
+    struct run_once_list *p = run_once_queue;
+
+    while(p != NULL) {
+        p->run->cb(p->run->should_run, p->run->context);
+
+        struct run_once_list *old = p;
+        p = p->next;
+
+        log_trace("running a run_once job");
+
+        free(old->run);
+        free(old);
+    }
+
+    run_once_queue = NULL;
+
+    uv_prepare_stop(prepare);
+    run_once_prepare_started = false;
+}
+
+struct run_once
+runloop_run_once(runloop_stateful_cb cb, void *context) {
+    struct run_once_private *new_job = ad_malloc(sizeof(struct run_once_private));
+    struct run_once_list *queue_entry = ad_malloc(sizeof(struct run_once_list));
+    struct run_once retval = {
+            .cb = cb,
+            .context = context,
+            .private = new_job,
+    };
+
+    log_trace("scheduled job to run at the next runloop iteration");
+
+    new_job->cb = retval.cb;
+    new_job->context = retval.context;
+    new_job->should_run = true;
+
+    queue_entry->run = new_job;
+    queue_entry->next = NULL;
+
+    if (run_once_queue == NULL) {
+        run_once_queue = queue_entry;
+        run_once_last = queue_entry;
     } else {
-        util_fatal("attempt to reduce size of the vserial_lookup array\n");
-    }
-}
-
-int
-runloop_count_vserial(void) {
-    int quantity = 0;
-
-    for(int i = 0; i <= watched_descriptors.max_fd; i++) {
-        if (watched_descriptors.vserial_lookup[i] != NULL) {
-            quantity++;
-        }
+        run_once_last->next = queue_entry;
+        run_once_last = queue_entry;
     }
 
-    return quantity;
-}
-
-struct pollfd *
-runloop_create_watched(void) {
-    int num_fd = runloop_count_vserial();
-    struct pollfd *watched = util_zalloc(sizeof(struct pollfd) * num_fd);
-    int fd_slot = 0;
-
-    for(int i = 0; i <= watched_descriptors.max_fd; i++) {
-        VSERIAL *vserial = watched_descriptors.vserial_lookup[i];
-
-        if (vserial != NULL) {
-            struct pollfd *poll_entry = &watched[fd_slot];
-
-            poll_entry->fd = vserial->pty_master.fd;
-            // POLLPRI events will be generated with the termios
-            // information changes on the slave pty
-            poll_entry->events |= POLLPRI;
-
-            //printf("new poll_entry events: %d\n", poll_entry->events);
-            fd_slot++;
-        }
+    if (! run_once_prepare_started) {
+        uv_prepare_start(run_once_prepare, run_once_prepare_cb);
     }
 
-    //printf("Just built %d poll entries from vserial_lookup max_fd=%d\n", fd_slot, watched_descriptors.max_fd);
-
-    return watched;
-}
-
-void
-runloop_add_vserial(VSERIAL *vserial) {
-    int master_fd = vserial->pty_master.fd;
-    struct pollfd *old_watched = watched_descriptors.watched;
-
-    if (master_fd > watched_descriptors.max_fd) {
-        runloop_resize_vserial_lookup(master_fd);
-    }
-
-    if (watched_descriptors.vserial_lookup[master_fd] != NULL) {
-        util_fatal("attempt to add duplicate fd: %d\n", master_fd);
-    }
-
-    watched_descriptors.vserial_lookup[master_fd] = vserial;
-    watched_descriptors.watched = runloop_create_watched();
-    watched_descriptors.num_fd = runloop_count_vserial();
-
-    free(old_watched);
-
-    //printf("new Master fd: %d\n", master_fd);
-    //printf("new max_fd: %d\n", watched_descriptors.max_fd);
-    //printf("Number of things in vserial_lookup: %d\n", runloop_count_vserial());
-}
-
-VSERIAL *
-runloop_get_vserial_by_fd(int fd) {
-    VSERIAL *vserial = watched_descriptors.vserial_lookup[fd];
-
-    if (vserial == NULL) {
-        return NULL;
-    }
-
-    if (vserial->pty_master.fd != fd) {
-        util_fatal("Got fd %d from vserial_lookup with key of %d\n", vserial->pty_master.fd, fd);
-    }
-
-    return vserial;
-}
-
-sigset_t *
-runloop_create_empty_sigset(void) {
-    sigset_t *set = util_zalloc(sizeof(sigset_t));
-
-    if (sigemptyset(set)) {
-        util_fatal("could not sigemptyset: %m");
-    }
-
-    return set;
-}
-
-sigset_t *
-runloop_create_sigint_sigset(void) {
-    sigset_t *set = runloop_create_empty_sigset();
-
-    if (sigaddset(set, SIGINT)) {
-        util_fatal("could not sigaddset: %m");
-    }
-
-    return set;
-}
-
-void
-runloop_block_sigint(void) {
-    sigset_t *will_block = runloop_create_sigint_sigset();
-    int retval = pthread_sigmask(SIG_BLOCK, will_block, NULL);
-
-    if (retval) {
-        // FIXME need to improve this so it has the error text
-        util_fatal("could not pthread_sigmask() - and can't perror, no: %d", retval);
-    }
-
-    free(will_block);
-}
-
-void
-runloop_unblock_sigint(void) {
-    sigset_t *will_unblock = runloop_create_sigint_sigset();
-    int retval = pthread_sigmask(SIG_BLOCK, will_unblock, NULL);
-
-    if (retval) {
-        // FIXME need to improve this so it has the error text
-        util_fatal("could not pthread_sigmask() - and can't perror, no: %d", retval);
-    }
-
-    free(will_unblock);
-}
-
-void
-runloop_sigint_handler(UNUSED int signal) {
-    should_run = 0;
-    alarm(1);
-}
-
-void
-runloop_sigalrm_handler(UNUSED int signal) {
-    util_fatal("Timeout when trying to cleanup from runloop\n");
-}
-
-void
-runloop_install_signal_handlers(void) {
-    if (signal(SIGINT, runloop_sigint_handler) == SIG_ERR) {
-        util_fatal("Could not register INT signal handler: %m");
-    }
-
-    if (signal(SIGALRM, runloop_sigalrm_handler) == SIG_ERR) {
-        util_fatal("Could not register ALRM signal handler: %m");
-    }
-}
-
-void
-runloop_remove_signal_handlers(void) {
-    if (signal(SIGINT, SIG_DFL) == SIG_ERR) {
-        util_fatal("Could not remove INT signal handler: %m");
-    }
-
-    if (signal(SIGALRM, SIG_DFL) == SIG_ERR) {
-        util_fatal("could not remove ALRM signal handler: %m");
-    }
-}
-
-bool
-runloop_enable_read(int enable_fd) {
-    struct pollfd *watched = watched_descriptors.watched;
-    int nfds = watched_descriptors.num_fd;
-    bool found_it = false;
-    bool old_value;
-
-    for (int i = 0; i < nfds; i++) {
-        struct pollfd *poll_entry = &watched[i];
-        int watched_fd = poll_entry->fd;
-
-        if (watched_fd == enable_fd) {
-            found_it = 1;
-            old_value = poll_entry->events & POLLIN;
-            poll_entry->events |= POLLIN;
-            break;
-        }
-    }
-
-    if (! found_it) {
-        util_fatal("Could not find fd %d in watched_descriptors", enable_fd);
-    }
-
-    return old_value;
-}
-
-bool
-runloop_disable_read(int disable_fd) {
-    struct pollfd *watched = watched_descriptors.watched;
-    int nfds = watched_descriptors.num_fd;
-    bool found_it = false;
-    bool old_value;
-
-    for (int i = 0; i < nfds; i++) {
-        struct pollfd *poll_entry = &watched[i];
-        int watched_fd = poll_entry->fd;
-
-        if (watched_fd == disable_fd) {
-            found_it = 1;
-            old_value = poll_entry->events & POLLIN;
-            poll_entry->events &= ~POLLIN;
-            break;
-        }
-    }
-
-    if (! found_it) {
-        util_fatal("Could not find fd %d in watched_descriptors", disable_fd);
-    }
-
-    return old_value;
-}
-
-bool
-runloop_disable_write(int disable_fd) {
-    struct pollfd *watched = watched_descriptors.watched;
-    int nfds = watched_descriptors.num_fd;
-    bool found_it = false;
-    bool old_value;
-
-    for (int i = 0; i < nfds; i++) {
-        struct pollfd *poll_entry = &watched[i];
-        int watched_fd = poll_entry->fd;
-
-        if (watched_fd == disable_fd) {
-            found_it = 1;
-            old_value = poll_entry->events & POLLOUT;
-            poll_entry->events &= ~POLLOUT;
-            break;
-        }
-    }
-
-    if (! found_it) {
-        util_fatal("Could not find fd %d in watched_descriptors", disable_fd);
-    }
-
-    return old_value;
-}
-
-bool
-runloop_enable_write(int enable_fd) {
-    struct pollfd *watched = watched_descriptors.watched;
-    int nfds = watched_descriptors.num_fd;
-    bool found_it = false;
-    bool old_value;
-
-    for (int i = 0; i < nfds; i++) {
-        struct pollfd *poll_entry = &watched[i];
-        int watched_fd = poll_entry->fd;
-
-        if (watched_fd == enable_fd) {
-            found_it = 1;
-            old_value = poll_entry->events & POLLOUT;
-            poll_entry->events |= POLLOUT;
-            break;
-        }
-    }
-
-    if (! found_it) {
-        util_fatal("Could not find fd %d in watched_descriptors", enable_fd);
-    }
-
-    return old_value;
-}
-
-// FIXME some of this logic should be moved to vserial.c
-int
-runloop_start(void) {
-    struct pollfd *watched = watched_descriptors.watched;
-    int nfds = watched_descriptors.num_fd;
-    sigset_t *masked_signals = runloop_create_empty_sigset();
-    uint8_t *read_buf = util_zalloc(CONFIG_READ_SIZE);
-
-    should_run = 1;
-
-    runloop_install_signal_handlers();
-
-    while(1) {
-        //printf("About to call poll(*, %d, -1); should_run: %i\n", nfds, should_run);
-
-        if (! should_run) {
-            //printf("Leaving runloop because of ctrl+c\n");
-            break;
-        }
-
-        // FIXME when the IO loop is busy ctrl+c does not work
-//        runloop_block_sigint();
-        int retval = ppoll(watched, nfds, NULL, masked_signals);
-//        runloop_unblock_sigint();
-
-        if (retval == -1) {
-            if (errno == EINTR) {
-                continue;
-            }
-
-            util_fatal("ppoll() failed: %m");
-        }
-
-        //printf("poll() returned: %d\n", retval);
-        //printf("poll's revents: %d\n", watched[0].revents);
-
-        for(int i = 0; i < nfds; i++) {
-            //printf("checking poll results; i=%d\n", i);
-            short revents = watched[i].revents;
-
-            if (revents & POLLERR) {
-                util_fatal("Got POLLERR\n");
-            }
-
-            if (revents & (POLLOUT | POLLIN | POLLPRI)) {
-                int fd = watched[i].fd;
-                VSERIAL *vserial = runloop_get_vserial_by_fd(fd);
-
-                if (vserial == NULL) {
-                    util_fatal("Could not find VSERIAL for fd %d", fd);
-                }
-
-                if (revents & POLLOUT) {
-                    //printf("Got POLLOUT\n");
-                    if (vserial->send_buffer == NULL) {
-                        // tell the driver that it can add
-                        // some data to the send buffer
-                        vserial_call_send_ready_handler(vserial);
-                    }
-
-                    if (vserial->send_buffer != NULL) {
-                        size_t write_size;
-
-                        if (vserial->send_buffer_size > CONFIG_WRITE_SIZE) {
-                            write_size = CONFIG_WRITE_SIZE;
-                        } else {
-                            write_size = vserial->send_buffer_size;
-                        }
-
-                        ssize_t retval = write(fd, vserial->send_buffer, write_size);
-
-                        if (retval == -1) {
-                            util_fatal("Could not write(): %m");
-                        }
-
-                        //printf("Wrote %ld bytes; send_buffer_size = %ld\n", retval, vserial->send_buffer_size);
-                        vserial->send_buffer_size -= retval;
-                        //printf("New send_buffer_size: %ld\n", vserial->send_buffer_size);
-
-                        if (vserial->send_buffer_size < 0) {
-                            util_fatal("send_buffer_size < 0: %d", vserial->send_buffer_size);
-                        }
-
-                        if (vserial->send_buffer_size == 0) {
-                            free(vserial->send_buffer);
-                            vserial->send_buffer = NULL;
-                        } else {
-                            vserial->send_buffer += retval;
-                        }
-                    }
-                }
-
-                if (revents & (POLLIN | POLLPRI)) {
-                    //printf("got POLLIN\n");
-                    ssize_t retval = read(fd, read_buf, CONFIG_READ_SIZE);
-                    if (retval == -1) {
-                        util_fatal("Could not read from fd: %m");
-                    }
-
-                    //printf("Read %ld bytes\n", retval);
-
-                    if (retval >= 1) {
-                        uint8_t packet_type = read_buf[0];
-
-                        if (packet_type == TIOCPKT_DATA) {
-                            // only send the data, skip the status byte
-                            vserial_call_recv_data_handler(vserial, read_buf + 1, retval - 1);
-                        } else {
-                            //printf("Packet type: %u\n", packet_type);
-                        }
-
-                        // FIXME move to a handler implemented in vserial.c that
-                        // takes a VSERIAL *
-                        if (packet_type & TIOCPKT_IOCTL) {
-                            //printf("should call a speed handler but can't\n");
-                        }
-
-                        // FIXME move to a handler implemented in vserial.c that
-                        // takes a VSERIAL *
-                        if (packet_type & TIOCPKT_MSET) {
-                            //printf("Calling control line handler\n");
-                            vserial_call_control_line_handler(vserial);
-                        }
-                    }
-                }
-            }
-        }
-
-        //printf("\n");
-    }
-
-    alarm(0);
-    runloop_unblock_sigint();
-
-    free(masked_signals);
-    free(read_buf);
-
-    return 0;
+    return retval;
 }

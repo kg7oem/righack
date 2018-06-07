@@ -91,6 +91,42 @@ autodie_handler(const char *function, int error, const char *message) {
     util_fatal("%s() died \"%s\": %s", function, message, strerror(error));
 }
 
+static void
+start_module_handler(bool should_run, void *context) {
+    const void **args = context;
+    const struct module_info *module_info = args[0];
+    const char *section_name = args[1];
+
+    if (should_run) {
+        log_debug("Starting module instance '%s' in runloop", section_name);
+
+        if (module_start(module_info, section_name) == NULL) {
+            util_fatal("Could not start module '%s'", section_name);
+        }
+
+    }
+
+    free(args);
+}
+
+void
+handle_config_section(const char *section) {
+    const char *module_name = configfile_rgets_section_key(section, "module.name");
+
+    log_debug("config section '%s' module.name = '%s'", section, module_name);
+    const struct module_info *new_module_info = module_get_info(module_name);
+
+    if (new_module_info == NULL) {
+        util_fatal("could not find module implementation for '%s'", module_name);
+    }
+
+    const void **args = ad_calloc(2, sizeof(void *));
+    args[0] = new_module_info;
+    args[1] = section;
+
+    log_trace("scheduling module '%s' to start later", section);
+    runloop_run_once(start_module_handler, args);
+}
 
 void
 bootstrap(void) {
@@ -99,30 +135,15 @@ bootstrap(void) {
     rig_set_debug(RIG_DEBUG_WARN);
     rig_set_debug_callback(hamlib_debug_handler, NULL);
 
+    runloop_bootstrap();
     module_bootstrap();
-}
-
-void
-handle_config_section(const char *section) {
-    const char *module_name = configfile_rgets_section_key(section, "module.name");
-
-    log_debug("config section '%s' module.name = '%s'", section, module_name);
-    struct module_info *new_module_info = module_get_info(module_name);
-
-    if (new_module_info == NULL) {
-        util_fatal("could not find module implementation for '%s'", module_name);
-    }
-
-    if (module_start(new_module_info, section) == NULL) {
-        util_fatal("Could not start module '%s'");
-    }
 }
 
 int
 main(UNUSED int argc, UNUSED char **argv) {
     bootstrap();
 
-    log_set_current_level(log_level_debug);
+    log_set_current_level(log_level_trace);
 
     log_info("righack is starting");
 
@@ -140,7 +161,8 @@ main(UNUSED int argc, UNUSED char **argv) {
         handle_config_section(section_name);
     }
 
-    module_stop_all();
+    runloop_run();
+    runloop_cleanup();
 
     guts_exit(exit_ok);
 }
