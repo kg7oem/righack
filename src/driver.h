@@ -54,7 +54,10 @@
 
 #include <inttypes.h>
 
-#define DRIVER_CALL(driver, operation, ...) driver->interface.op.operation(driver, __VA_ARGS__);
+#define DRIVER_CALL_OP(driver, interface, operation) driver->info->op.interface.operation(driver)
+// FIXME why can't this pass arguments to the function pointer?
+//#define DRIVER_CALL_OP(driver, interface, operation, ...) driver->info->op.interface.operation(driver, __VA_ARGS_)
+//#define DRIVER_CALL_CB(driver, interface, cbname, ...) driver->cb->interface.cbname(driver, __VA_ARGS__)
 
 struct driver;
 struct driver_info;
