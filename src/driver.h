@@ -100,32 +100,33 @@ struct driver_interface_cb {
 };
 
 typedef void (*driver_bootstrap_handler)(void);
-typedef struct driver * (*driver_create_handler)(const struct driver_info *);
-typedef void (*driver_destroy_handler)(struct driver *);
+typedef struct driver * (*driver_init_handler)(struct driver *);
+typedef void (*driver_cleanup_handler)(struct driver *);
 
 struct driver_lifecycle_op {
     driver_bootstrap_handler bootstrap;
-    driver_create_handler create;
-    driver_destroy_handler destroy;
+    driver_init_handler create;
+    driver_cleanup_handler destroy;
 };
 
 struct driver_info {
     const char *name;
+    // FIXME this should be private / opaque to the user
     const struct driver_lifecycle_op lifecycle;
     const struct driver_interface_op op;
 };
 
 struct driver {
-    void *private;
+    void *user;
     const struct driver_info *info;
     struct driver_interface_cb *cb;
+    // FIXME this should be private / opaque to the user
     enum driver_status status;
 };
 
 
 struct driver * driver_create(const char *);
 void driver_bootstrap(void);
-const struct driver_info * driver_get_info(const char *);
 void driver_destroy(struct driver *, void *notify_cb);
 void driver_load_plugins(void);
 

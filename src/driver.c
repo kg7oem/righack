@@ -36,6 +36,19 @@ struct driver_list {
 
 static TLOCAL struct driver_list *loaded_drivers = NULL;
 
+static const struct driver_info *
+driver_get_info(const char *name) {
+    struct driver_list *p = loaded_drivers;
+
+    while(p != NULL) {
+        if (strcmp(p->driver->name, name) == 0) {
+            return p->driver;
+        }
+    }
+
+    return NULL;
+}
+
 static void
 driver_register(const struct driver_info *info) {
     struct driver_list *new_member = ad_malloc(sizeof(struct driver_list));
@@ -62,18 +75,6 @@ driver_load_plugins(void) {
     driver_register(vserial_driver_info());
 }
 
-const struct driver_info *
-driver_get_info(const char *name) {
-    struct driver_list *p = loaded_drivers;
-
-    while(p != NULL) {
-        if (strcmp(p->driver->name, name) == 0) {
-            return p->driver;
-        }
-    }
-
-    return NULL;
-}
 
 const char *
 driver_get_status_string(enum driver_status status) {
@@ -102,7 +103,15 @@ driver_create(const char *name) {
         return NULL;
     }
 
-    return info->lifecycle.create(info);
+    struct driver new_driver = {
+            .user = NULL,
+            .info = info,
+            .cb = ad_malloc(sizeof(struct driver_interface_cb)),
+    };
+
+    log_debug("vserial driver was created");
+
+    return info->lifecycle.create(util_memdup(&new_driver, sizeof(new_driver)));
 }
 
 void
@@ -121,6 +130,10 @@ driver_destroy(struct driver *driver, void *notify_cb) {
 
     if (driver->cb != NULL) {
         free(driver->cb);
+    }
+
+    if (driver->user != NULL) {
+        util_fatal("driver '%s' did not set the user data to NULL during cleanup", driver->info->name);
     }
 
     free(driver);

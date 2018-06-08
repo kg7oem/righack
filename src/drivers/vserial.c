@@ -37,24 +37,18 @@ vserial_lifecycle_bootstrap(void) {
 }
 
 static struct driver *
-vserial_lifecycle_create(UNUSED const struct driver_info *info) {
-    struct driver new_driver = {
-            .private = NULL,
-            .info = info,
-            .cb = ad_malloc(sizeof(struct driver_interface_cb)),
-    };
-
-    log_debug("vserial driver was created");
-
-    return util_memdup(&new_driver, sizeof(new_driver));
+vserial_lifecycle_init(struct driver *driver) {
+    log_debug("vserial driver instance is initializing");
+    driver->user = NULL;
+    return driver;
 }
 
 static void
-vserial_lifecycle_destroy(UNUSED struct driver *driver) {
-    log_debug("vserial driver is being destroyed");
+vserial_lifecycle_cleanup(UNUSED struct driver *driver) {
+    log_debug("vserial driver instance is being destroyed");
 
-    if (driver->private != NULL) {
-        free(driver->private);
+    if (driver->user != NULL) {
+        free(driver->user);
     }
 
     return;
