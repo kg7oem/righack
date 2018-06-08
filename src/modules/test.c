@@ -49,7 +49,7 @@ test_start_handler(UNUSED const char *config_name) {
 
     new_module->private = vserial;
 
-    log_info("test module started: '%s", config_name);
+    log_info("test module started: '%s'", config_name);
 
     return new_module;
 }
