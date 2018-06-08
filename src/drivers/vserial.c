@@ -22,43 +22,55 @@
 #include <stdlib.h>
 
 #include "../driver.h"
+#include "../external/autodie.h"
 #include "../log.h"
+#include "../plugin.h"
 #include "../types.h"
+#include "../util.h"
 #include "vserial.h"
 
 #define DRIVER_NAME "vserial"
 
-void
-vserial_driver_create(struct driver *driver) {
-    log_debug("vserial driver is being created");
-
-    driver->private = NULL;
+static void
+vserial_lifecycle_bootstrap(void) {
+    log_debug("vserial driver is being bootstrapped");
 }
 
-void
-vserial_driver_destroy(UNUSED struct driver *driver) {
+static struct driver *
+vserial_lifecycle_create(UNUSED const struct driver_info *info) {
+    struct driver new_driver = {
+            .private = NULL,
+            .info = info,
+            .cb = ad_malloc(sizeof(struct driver_interface_cb)),
+    };
+
+    log_debug("vserial driver was created");
+
+    return util_memdup(&new_driver, sizeof(new_driver));
+}
+
+static void
+vserial_lifecycle_destroy(UNUSED struct driver *driver) {
     log_debug("vserial driver is being destroyed");
+
+    if (driver->private != NULL) {
+        free(driver->private);
+    }
+
+    return;
 }
 
 const struct driver_info *
 vserial_driver_info(void) {
-    static const struct driver_stream_int our_stream_interface = {
-            .op = {
-                    .terminate = NULL,
-                    .get_mask = NULL,
-                    .clear_mask = NULL,
-                    .set_mask = NULL,
-            },
-    };
-
-    static const struct driver_info our_driver_info = {
+    static struct driver_info our_info = {
             .name = DRIVER_NAME,
-            .create = vserial_driver_create,
-            .destroy = vserial_driver_destroy,
-            .interface = {
-                    .stream = &our_stream_interface,
+            .lifecycle = LIFECYCLE_OPS(vserial),
+            .op = {
+                    .stream = {
+                            .terminate = NULL,
+                    },
             },
     };
 
-    return &our_driver_info;
+    return &our_info;
 }

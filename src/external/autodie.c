@@ -152,4 +152,3 @@ ad_strdup(const char *s) {
 
     return p;
 }
-

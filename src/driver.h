@@ -57,62 +57,80 @@
 #define DRIVER_CALL(driver, operation, ...) driver->interface.op.operation(driver, __VA_ARGS__);
 
 struct driver;
+struct driver_info;
 
-typedef void (*driver_create_handler)(struct driver *);
-typedef void (*driver_destroy_handler)(struct driver *);
+enum driver_status {
+    driver_status_unstarted = 0,
+    driver_status_starting,
+    driver_status_started,
+    driver_status_stopping,
+    driver_status_stopped,
+};
+
 typedef void (*driver_cb)(struct driver *);
 typedef void (*driver_stream_terminate_op)(struct driver *);
 typedef uint32_t (*driver_stream_get_mask_op)(struct driver *);
 typedef void (*driver_stream_set_mask_op)(struct driver *, uint32_t);
 typedef void (*driver_stream_clear_mask_op)(struct driver *, uint32_t);
 
-struct driver_stream_int {
-    // these are events which indicate that something already happened
-    // so the names are passed tense adjectives
-    struct {
-        driver_cb opened;
-        driver_cb closed;
-        driver_cb faulted;
-        driver_cb received; // data has been read and is available
-        driver_cb drained; // there is room in the output buffer
-    } cb;
-
-    // these are operations that will do something so the names
-    // are verbs or start with a verb
-    const struct {
-        driver_stream_terminate_op terminate;
-        // control notifications for events based on a bitmask
-        driver_stream_get_mask_op get_mask;
-        driver_stream_clear_mask_op clear_mask;
-        driver_stream_set_mask_op set_mask;
-    } op;
+// these are events which indicate that something already happened
+// so the names are passed tense adjectives
+struct driver_stream_int_cb {
+    driver_cb opened;
+    driver_cb closed;
+    driver_cb faulted;
+    driver_cb received; // data has been read and is available
+    driver_cb drained; // there is room in the output buffer
 };
 
-struct driver_message_int;
-struct driver_rs232_int;
+struct driver_stream_int_op {
+    driver_stream_terminate_op terminate;
+    // control notifications for events based on a bitmask
+    driver_stream_get_mask_op get_mask;
+    driver_stream_clear_mask_op clear_mask;
+    driver_stream_set_mask_op set_mask;
+};
 
-struct interface {
-    const struct driver_stream_int *stream;
-    const struct driver_message_int *message;
-    const struct driver_rs232_int *rs232;
+struct driver_interface_op {
+    const struct driver_stream_int_op stream;
+};
+
+struct driver_interface_cb {
+    struct driver_stream_int_cb stream;
+};
+
+typedef void (*driver_bootstrap_handler)(void);
+typedef struct driver * (*driver_create_handler)(const struct driver_info *);
+typedef void (*driver_destroy_handler)(struct driver *);
+
+struct driver_lifecycle_op {
+    driver_bootstrap_handler bootstrap;
+    driver_create_handler create;
+    driver_destroy_handler destroy;
 };
 
 struct driver_info {
     const char *name;
-    const struct interface interface;
-    driver_create_handler create;
-    driver_destroy_handler destroy;
+    const struct driver_lifecycle_op lifecycle;
+    const struct driver_interface_op op;
 };
 
 struct driver {
     void *private;
     const struct driver_info *info;
+    struct driver_interface_cb *cb;
+    enum driver_status status;
 };
+
 
 struct driver * driver_create(const char *);
 void driver_bootstrap(void);
 const struct driver_info * driver_get_info(const char *);
 void driver_destroy(struct driver *, void *notify_cb);
+void driver_load_plugins(void);
 
+const char * driver_get_status_string(enum driver_status status);
+enum driver_status driver_get_status(struct driver *);
+enum driver_status driver_set_status(struct driver *, enum driver_status);
 
 #endif /* SRC_DRIVER_H_ */

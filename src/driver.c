@@ -19,6 +19,7 @@
  *
  */
 
+#include <stdlib.h>
 #include <string.h>
 
 #include "driver.h"
@@ -54,6 +55,10 @@ driver_register(const struct driver_info *info) {
 void
 driver_bootstrap(void) {
     log_debug("bootstrapping the driver system");
+}
+
+void
+driver_load_plugins(void) {
     driver_register(vserial_driver_info());
 }
 
@@ -70,6 +75,25 @@ driver_get_info(const char *name) {
     return NULL;
 }
 
+const char *
+driver_get_status_string(enum driver_status status) {
+    switch (status) {
+    case driver_status_unstarted:
+        return "unstarted";
+    case driver_status_starting:
+        return "starting";
+    case driver_status_started:
+        return "started";
+    case driver_status_stopping:
+        return "stopping";
+    case driver_status_stopped:
+        return "stopped";
+    }
+
+    util_fatal("should never get here");
+    return NULL;
+}
+
 struct driver *
 driver_create(const char *name) {
     const struct driver_info *info = driver_get_info(name);
@@ -78,17 +102,38 @@ driver_create(const char *name) {
         return NULL;
     }
 
-    struct driver *new_driver = ad_malloc(sizeof(struct driver));
-    new_driver->info = info;
-
-    return new_driver;
+    return info->lifecycle.create(info);
 }
 
 void
 driver_destroy(struct driver *driver, void *notify_cb) {
+    enum driver_status status = driver->status;
+
     if (notify_cb != NULL) {
         util_fatal("cleanup notification does not work yet");
     }
 
-    driver->info->destroy(driver);
+    if (status != driver_status_unstarted && status != driver_status_stopped) {
+        util_fatal("attempt to destroy a driver in status %s", driver_get_status_string(status));
+    }
+
+    driver->info->lifecycle.destroy(driver);
+
+    if (driver->cb != NULL) {
+        free(driver->cb);
+    }
+
+    free(driver);
+}
+
+enum driver_status
+driver_get_status(struct driver *driver) {
+    return driver->status;
+}
+
+enum driver_status
+driver_set_status(struct driver *driver, enum driver_status status) {
+    enum driver_status old = driver->status;
+    driver->status = status;
+    return old;
 }

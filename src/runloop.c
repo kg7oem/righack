@@ -25,6 +25,7 @@
 #include <stdlib.h>
 
 #include "external/autodie.h"
+#include "module.h"
 #include "runloop.h"
 #include "types.h"
 #include "util.h"
@@ -91,7 +92,12 @@ runloop_cleanup(void) {
 
     log_debug("starting to cleanup the runloop");
 
-    // close any filehandles that are not already closing
+    // first stop any modules and give them a chance to process
+    // their cleanup callbacks
+    module_stop_all();
+    uv_run(thread_loop, UV_RUN_DEFAULT);
+
+    // close any handles that are not already closing
     log_lots("walking the runloop to close needed handles");
     uv_walk(thread_loop, walk_runloop_cb, NULL);
 

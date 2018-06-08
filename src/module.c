@@ -92,7 +92,7 @@ module_bootstrap(void) {
 }
 
 struct module *
-module_start(const struct module_info *info, const char *config_section) {
+module_create(const struct module_info *info, const char *config_section) {
     log_verbose("starting module '%s' for configuration '%s'", info->name, config_section);
 
     struct module *new_module = info->start(config_section);
@@ -120,9 +120,7 @@ module_start(const struct module_info *info, const char *config_section) {
 
 enum module_status
 module_stop(UNUSED struct module *module) {
-    util_fatal("won't even try to stop because there is no free() anywhere");
-//    return module->info->stop(module);
-    return module_failed;
+    return module->info->stop(module);
 }
 
 void

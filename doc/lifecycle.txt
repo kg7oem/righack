@@ -1,0 +1,16 @@
+Lifecycles of drivers and modules
+
+
+Initialization - outside of runloop
+
+  1. Invoke the function to get the info struct
+  2. Invoke the function pointer in the info struct to bootstrap
+
+Execution - inside the runloop
+
+  1. Invoke the create function to get a new handle
+  2. Invoke the start function for the handle
+  3. Wait for the handle to get marked as started
+  4. Invoke the stop function
+  5. Wait for the handle to get marked as stopped
+  6. Invoke the destroy function to free() everything

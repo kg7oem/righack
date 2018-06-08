@@ -38,7 +38,7 @@ struct module {
 };
 
 typedef enum module_status (*module_init_handler)(void);
-typedef struct module * (*module_start_handler)(const char *);
+typedef struct module * (*module_create_handler)(const char *);
 typedef enum module_status (*module_stop_handler)(struct module *);
 
 struct module_info {
@@ -46,7 +46,7 @@ struct module_info {
     // called once during startup so the module can initialize
     module_init_handler init;
     // called on an instance of a module once when it is started
-    module_start_handler start;
+    module_create_handler start;
     // called on an instance of a module once when it is stopped
     module_stop_handler stop;
 };
@@ -54,7 +54,7 @@ struct module_info {
 void module_bootstrap(void);
 const struct module_info * module_get_info(const char *name);
 
-struct module * module_start(const struct module_info *, const char *);
+struct module * module_create(const struct module_info *, const char *);
 void module_stop_all(void);
 
 #endif /* SRC_MODULE_H_ */

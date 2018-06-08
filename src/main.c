@@ -99,7 +99,7 @@ start_module_handler(bool should_run, void *context) {
     if (should_run) {
         log_debug("Starting module instance '%s' in runloop", section_name);
 
-        if (module_start(module_info, section_name) == NULL) {
+        if (module_create(module_info, section_name) == NULL) {
             util_fatal("Could not start module '%s'", section_name);
         }
 
@@ -152,8 +152,11 @@ main(UNUSED int argc, UNUSED char **argv) {
 
     const char *config_file = argv[1];
     log_debug("loading configuration from %s", config_file);
-
     configfile_load(config_file);
+
+    log_debug("loading driver plugins");
+    driver_load_plugins();
+
     int num_sections = configfile_get_section_count();
     for(int i = 0; i < num_sections; i++) {
         const char *section_name = configfile_get_section_name(i);
