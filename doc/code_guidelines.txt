@@ -1,0 +1,29 @@
+ORDERING
+
+  1. The license comment is the first part of every source file or header file
+
+  2. An optional documentation comment block follows the license block
+
+  3. System includes (those wrapped in < >) come first and are in alphabetical
+     order according to filename
+
+  4. User includes (those wrapped in " ") come next and are in alphabetical
+     order according to filename
+
+  5. The header or source file contents follow
+
+MEMORY MANAGEMENT
+
+  1. If the caller of the function is responsible for freeing the memory that
+     is returned and they only need to use free() then the function name
+     must have a suffix of __a for allocated.
+
+     For example: char * string_copy__a(const char *)
+
+  2. If the caller of the function is responsible for freeing the memory that
+     is returned and they need to use a specific function to do it then the
+     function names must come in pairs with a suffix of _create and _destroy.
+
+     Example:
+       struct some_thing * some_thing_create(void)
+       void some_thing_destroy(struct some_thing *)
