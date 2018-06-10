@@ -21,6 +21,7 @@
 
 #define _GNU_SOURCE
 
+#include <inttypes.h>
 #include <stdbool.h>
 #include <stdlib.h>
 
@@ -192,4 +193,57 @@ runloop_run_once(runloop_stateful_cb cb, void *context) {
     }
 
     return retval;
+}
+
+struct runloop_timer_private {
+    uv_timer_t uv_timer;
+};
+
+struct runloop_timer *
+runloop_timer_create(runloop_stateful_cb cb, void *context) {
+    struct runloop_timer *timer = ad_malloc(sizeof(struct runloop_timer));
+    timer->private = ad_malloc(sizeof(struct runloop_timer_private));
+
+    timer->context = context;
+    timer->cb = cb;
+
+    uv_timer_init(thread_loop, &timer->private->uv_timer);
+    timer->private->uv_timer.data = timer;
+
+    return timer;
+}
+
+static void
+runloop_timer_close_cb(uv_handle_t *uv_timer) {
+    struct runloop_timer *timer = uv_timer->data;
+
+    timer->cb(false, timer);
+
+    free(timer->private);
+    free(timer);
+}
+
+static void
+runloop_timer_run_cb(uv_timer_t *uv_timer) {
+    struct runloop_timer *timer = uv_timer->data;
+    timer->cb(true, timer);
+}
+
+void
+runloop_timer_destroy(struct runloop_timer *timer) {
+    if (uv_is_active((uv_handle_t *)&timer->private->uv_timer)) {
+        util_fatal("attempt to destroy a timer that is active");
+    }
+
+    uv_close((uv_handle_t *)&timer->private->uv_timer, runloop_timer_close_cb);
+}
+
+void
+runloop_timer_start(struct runloop_timer *timer, uint64_t initial, uint64_t repeat) {
+    uv_timer_start(&timer->private->uv_timer, runloop_timer_run_cb, initial, repeat);
+    return;
+}
+
+void runloop_timer_stop(struct runloop_timer *timer) {
+    uv_timer_stop(&timer->private->uv_timer);
 }

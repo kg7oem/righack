@@ -29,6 +29,7 @@ typedef void (*runloop_generic_cb)(void *);
 typedef void (*runloop_stateful_cb)(bool, void *);
 
 struct run_once_private;
+struct runloop_timer_private;
 
 struct run_once {
     runloop_stateful_cb cb;
@@ -42,10 +43,18 @@ bool runloop_run(void);
 void runloop_cleanup(void);
 bool runloop_has_control(void);
 
-#endif /* SRC_RUNLOOP_H_ */
-
 // FIXME this should be called runloop_delay_execution()
 struct run_once runloop_run_once(runloop_stateful_cb, void *);
 
-struct runloop_timer * runloop_create_timer(runloop_stateful_cb);
-void runloop_destroy_timer(struct runloop_timer *);
+struct runloop_timer {
+    runloop_stateful_cb cb;
+    void *context;
+    struct runloop_timer_private *private;
+};
+
+struct runloop_timer * runloop_timer_create(runloop_stateful_cb, void *);
+void runloop_timer_destroy(struct runloop_timer *);
+void runloop_timer_start(struct runloop_timer *, uint64_t, uint64_t);
+void runloop_timer_stop(struct runloop_timer *);
+
+#endif /* SRC_RUNLOOP_H_ */

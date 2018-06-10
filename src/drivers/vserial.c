@@ -25,11 +25,31 @@
 #include "../external/autodie.h"
 #include "../log.h"
 #include "../plugin.h"
+#include "../runloop.h"
 #include "../types.h"
 #include "../util.h"
 #include "vserial.h"
 
 #define DRIVER_NAME "vserial"
+
+struct vserial_context {
+    struct runloop_timer *timer;
+};
+
+static void
+vserial_timer_cb(bool should_run, void *context) {
+    static int count = 0;
+    struct runloop_timer *timer = context;
+    if (should_run) {
+        log_debug("the timer wanted to say something: %s", timer->context);
+
+        if (++count >= 10) {
+            runloop_timer_stop(timer);
+        }
+    } else {
+        log_debug("this timer is telling us we are done");
+    }
+}
 
 static void
 vserial_lifecycle_bootstrap(void) {
@@ -39,7 +59,14 @@ vserial_lifecycle_bootstrap(void) {
 static struct driver *
 vserial_lifecycle_init(struct driver *driver) {
     log_debug("vserial driver instance is initializing");
-    driver->user = NULL;
+    struct vserial_context *context = ad_malloc(sizeof(struct vserial_context));
+
+    context->timer = runloop_timer_create(vserial_timer_cb, "i am a timer");
+
+    driver->user = context;
+
+    runloop_timer_start(context->timer, 0, 500);
+
     return driver;
 }
 
@@ -47,8 +74,13 @@ static void
 vserial_lifecycle_cleanup(UNUSED struct driver *driver) {
     log_debug("vserial driver instance is being destroyed");
 
-    if (driver->user != NULL) {
-        free(driver->user);
+    struct vserial_context *context = driver->user;
+
+    if (context != NULL) {
+        runloop_timer_destroy(context->timer);
+        free(context);
+
+        driver->user = NULL;
     }
 
     return;
