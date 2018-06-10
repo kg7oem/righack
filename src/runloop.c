@@ -197,6 +197,8 @@ runloop_run_once(runloop_stateful_cb cb, void *context) {
 
 struct runloop_timer_private {
     uv_timer_t uv_timer;
+    uint64_t initial;
+    uint64_t repeat;
 };
 
 struct runloop_timer *
@@ -239,11 +241,26 @@ runloop_timer_destroy(struct runloop_timer *timer) {
 }
 
 void
-runloop_timer_start(struct runloop_timer *timer, uint64_t initial, uint64_t repeat) {
-    uv_timer_start(&timer->private->uv_timer, runloop_timer_run_cb, initial, repeat);
+runloop_timer_schedule(struct runloop_timer *timer, uint64_t initial, uint64_t repeat) {
+    timer->private->initial = initial;
+    timer->private->repeat = repeat;
+
+    uv_timer_start(&timer->private->uv_timer, runloop_timer_run_cb, timer->private->initial, timer->private->repeat);
     return;
 }
 
-void runloop_timer_stop(struct runloop_timer *timer) {
+void
+runloop_timer_reset(struct runloop_timer *timer) {
+    if(! uv_is_active((uv_handle_t *)&timer->private->uv_timer)) {
+        util_fatal("attempt to reset a timer that is not active");
+    }
+
+    uv_timer_start(&timer->private->uv_timer, runloop_timer_run_cb, timer->private->initial, timer->private->repeat);
+}
+
+void runloop_timer_cancel(struct runloop_timer *timer) {
+    if(! uv_is_active((uv_handle_t *)&timer->private->uv_timer)) {
+        util_fatal("Attempt to cancel a timer that is not active");
+    }
     uv_timer_stop(&timer->private->uv_timer);
 }

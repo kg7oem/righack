@@ -54,7 +54,8 @@ struct runloop_timer {
 
 struct runloop_timer * runloop_timer_create(runloop_stateful_cb, void *);
 void runloop_timer_destroy(struct runloop_timer *);
-void runloop_timer_start(struct runloop_timer *, uint64_t, uint64_t);
-void runloop_timer_stop(struct runloop_timer *);
+void runloop_timer_schedule(struct runloop_timer *, uint64_t, uint64_t);
+void runloop_timer_cancel(struct runloop_timer *);
+void runloop_timer_reset(struct runloop_timer *);
 
 #endif /* SRC_RUNLOOP_H_ */

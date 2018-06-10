@@ -44,7 +44,7 @@ vserial_timer_cb(bool should_run, void *context) {
         log_debug("the timer wanted to say something: %s", timer->context);
 
         if (++count >= 10) {
-            runloop_timer_stop(timer);
+            runloop_timer_cancel(timer);
         }
     } else {
         log_debug("this timer is telling us we are done");
@@ -65,7 +65,7 @@ vserial_lifecycle_init(struct driver *driver) {
 
     driver->user = context;
 
-    runloop_timer_start(context->timer, 0, 500);
+    runloop_timer_schedule(context->timer, 0, 500);
 
     return driver;
 }
