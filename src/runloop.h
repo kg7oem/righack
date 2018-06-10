@@ -37,10 +37,15 @@ struct run_once {
 };
 
 void runloop_bootstrap(void);
+// FIXME this should be called runloop_enter_loop()
 bool runloop_run(void);
 void runloop_cleanup(void);
 bool runloop_has_control(void);
 
 #endif /* SRC_RUNLOOP_H_ */
 
+// FIXME this should be called runloop_delay_execution()
 struct run_once runloop_run_once(runloop_stateful_cb, void *);
+
+struct runloop_timer * runloop_create_timer(runloop_stateful_cb);
+void runloop_destroy_timer(struct runloop_timer *);
