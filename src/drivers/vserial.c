@@ -56,7 +56,7 @@ vserial_lifecycle_bootstrap(void) {
     log_debug("vserial driver is being bootstrapped");
 }
 
-static struct driver *
+static void
 vserial_lifecycle_init(struct driver *driver) {
     log_debug("vserial driver instance is initializing");
     struct vserial_context *context = ad_malloc(sizeof(struct vserial_context));
@@ -66,8 +66,6 @@ vserial_lifecycle_init(struct driver *driver) {
     driver->user = context;
 
     runloop_timer_schedule(context->timer, 0, 500);
-
-    return driver;
 }
 
 static void

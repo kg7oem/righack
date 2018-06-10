@@ -111,7 +111,9 @@ driver_create(const char *name) {
 
     log_debug("vserial driver was created");
 
-    return info->lifecycle.create(util_memdup(&new_driver, sizeof(new_driver)));
+    info->lifecycle.create(&new_driver);
+
+    return util_memdup(&new_driver, sizeof(new_driver));
 }
 
 void

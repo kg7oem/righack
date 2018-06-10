@@ -103,7 +103,7 @@ struct driver_interface_cb {
 };
 
 typedef void (*driver_bootstrap_handler)(void);
-typedef struct driver * (*driver_init_handler)(struct driver *);
+typedef void (*driver_init_handler)(struct driver *);
 typedef void (*driver_cleanup_handler)(struct driver *);
 
 struct driver_lifecycle_op {
