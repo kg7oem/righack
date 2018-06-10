@@ -124,7 +124,7 @@ handle_config_section(const char *section) {
     args[1] = section;
 
     log_trace("scheduling module '%s' to start later", section);
-    runloop_run_once(start_module_handler, args);
+    runloop_run_later(start_module_handler, args);
 }
 
 void

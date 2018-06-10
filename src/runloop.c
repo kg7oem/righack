@@ -162,7 +162,7 @@ run_once_prepare_cb(uv_prepare_t *prepare) {
 }
 
 struct run_once
-runloop_run_once(runloop_stateful_cb cb, void *context) {
+runloop_run_later(runloop_stateful_cb cb, void *context) {
     struct run_once_private *new_job = ad_malloc(sizeof(struct run_once_private));
     struct run_once_list *queue_entry = ad_malloc(sizeof(struct run_once_list));
     struct run_once retval = {

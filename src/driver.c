@@ -111,7 +111,7 @@ driver_create(const char *name) {
 
     log_debug("vserial driver was created");
 
-    info->lifecycle.create(&new_driver);
+    info->lifecycle.init(&new_driver);
 
     return util_memdup(&new_driver, sizeof(new_driver));
 }
@@ -128,7 +128,7 @@ driver_destroy(struct driver *driver, void *notify_cb) {
         util_fatal("attempt to destroy a driver in status %s", driver_get_status_string(status));
     }
 
-    driver->info->lifecycle.destroy(driver);
+    driver->info->lifecycle.cleanup(driver);
 
     if (driver->cb != NULL) {
         free(driver->cb);

@@ -108,8 +108,8 @@ typedef void (*driver_cleanup_handler)(struct driver *);
 
 struct driver_lifecycle_op {
     driver_bootstrap_handler bootstrap;
-    driver_init_handler create;
-    driver_cleanup_handler destroy;
+    driver_init_handler init;
+    driver_cleanup_handler cleanup;
 };
 
 struct driver_info {

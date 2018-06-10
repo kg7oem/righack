@@ -22,6 +22,6 @@
 #ifndef SRC_PLUGIN_H_
 #define SRC_PLUGIN_H_
 
-#define LIFECYCLE_OPS(name) { .bootstrap = name##_lifecycle_bootstrap, .create = name##_lifecycle_init, .destroy = name##_lifecycle_cleanup }
+#define LIFECYCLE_OPS(name) { .bootstrap = name##_lifecycle_bootstrap, .init = name##_lifecycle_init, .cleanup = name##_lifecycle_cleanup }
 
 #endif /* SRC_PLUGIN_H_ */

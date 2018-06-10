@@ -43,8 +43,7 @@ bool runloop_run(void);
 void runloop_cleanup(void);
 bool runloop_has_control(void);
 
-// FIXME this should be called runloop_delay_execution()
-struct run_once runloop_run_once(runloop_stateful_cb, void *);
+struct run_once runloop_run_later(runloop_stateful_cb, void *);
 
 struct runloop_timer {
     runloop_stateful_cb cb;
