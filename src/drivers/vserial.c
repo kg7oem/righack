@@ -24,7 +24,6 @@
 #include "../driver.h"
 #include "../external/autodie.h"
 #include "../log.h"
-#include "../plugin.h"
 #include "../runloop.h"
 #include "../types.h"
 #include "../util.h"
@@ -43,7 +42,7 @@ vserial_timer_cb(bool should_run, void *context) {
     if (should_run) {
         log_debug("the timer wanted to say something: %s", timer->context);
 
-        if (++count >= 10) {
+        if (++count >= 2) {
             runloop_timer_cancel(timer);
         }
     } else {
@@ -88,7 +87,7 @@ const struct driver_info *
 vserial_driver_info(void) {
     static struct driver_info our_info = {
             .name = DRIVER_NAME,
-            .lifecycle = LIFECYCLE_OPS(vserial),
+            .lifecycle = DRIVER_LIFECYCLE(vserial),
             .op = {
                     .stream = {
                             .terminate = NULL,

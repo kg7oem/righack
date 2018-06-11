@@ -22,6 +22,8 @@
 #ifndef SRC_MODULE_H_
 #define SRC_MODULE_H_
 
+#define MODULE_LIFECYCLE(name) { .bootstrap = name##_lifecycle_bootstrap, .start = name##_lifecycle_start, .stop = name##_lifecycle_stop }
+
 enum module_status {
     module_unknown = 0,
     module_ok,
@@ -32,29 +34,32 @@ enum module_status {
 struct module_info;
 
 struct module {
-    const char *label;
+    char *label;
     void *private;
     const struct module_info *info;
 };
 
-typedef enum module_status (*module_init_handler)(void);
-typedef struct module * (*module_create_handler)(const char *);
-typedef enum module_status (*module_stop_handler)(struct module *);
+typedef void (*module_bootstrap_handler)(void);
+typedef void (*module_start_handler)(struct module *);
+typedef void (*module_stop_handler)(struct module *);
+typedef void (*module_cleanup_handler)(struct module *);
+
+struct module_lifecycle_op {
+    module_bootstrap_handler bootstrap;
+    module_start_handler start;
+    module_stop_handler stop;
+};
 
 struct module_info {
     const char *name;
-    // called once during startup so the module can initialize
-    module_init_handler init;
-    // called on an instance of a module once when it is started
-    module_create_handler start;
-    // called on an instance of a module once when it is stopped
-    module_stop_handler stop;
+    struct module_lifecycle_op lifecycle;
 };
 
 void module_bootstrap(void);
 const struct module_info * module_get_info(const char *name);
 
 struct module * module_create(const struct module_info *, const char *);
+struct module * module_start(const char *, const char *);
 void module_stop_all(void);
 
 #endif /* SRC_MODULE_H_ */

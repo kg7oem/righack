@@ -19,6 +19,7 @@
  *
  */
 
+#include <stdlib.h>
 #include <string.h>
 
 #include "external/autodie.h"
@@ -57,22 +58,10 @@ module_get_info(const char *name) {
     return p->info;
 }
 
-static void module_setup(const struct module_info *info) {
+static void module_register(const struct module_info *info) {
     struct loaded_module_list *orig = loaded_modules;
     struct loaded_module_list *will_add = ad_malloc(sizeof(struct loaded_module_list));
     const char *name = info->name;
-
-    if (info->init == NULL) {
-        util_fatal("module %s did not define an init handler", name);
-    }
-
-    if (info->start == NULL) {
-        util_fatal("module %s did not define a start handler", name);
-    }
-
-    if (info->stop == NULL) {
-        util_fatal("module %s did not define a stop handler", name);
-    }
 
     if (module_get_info(name)) {
         util_fatal("attempt to add a module with a name that is a duplicate: %s", name);
@@ -82,30 +71,26 @@ static void module_setup(const struct module_info *info) {
     will_add->info = info;
 
     loaded_modules = will_add;
-
-    will_add->info->init();
 }
 
 void
 module_bootstrap(void) {
-    module_setup(test_module_info());
+    module_register(test_module_info());
 }
 
 struct module *
 module_create(const struct module_info *info, const char *config_section) {
-    log_verbose("starting module '%s' for configuration '%s'", info->name, config_section);
+    log_verbose("creating module '%s' for configuration '%s'", info->name, config_section);
 
-    struct module *new_module = info->start(config_section);
+    struct module *new_module = ad_malloc(sizeof(struct module));
+    new_module->label = ad_strdup(config_section);
+    new_module->info = info;
+    new_module->private = NULL;
+
     struct running_module_list *new_member = ad_malloc(sizeof(struct running_module_list));
-
-
     new_member->next = NULL;
-
-    if (new_module == NULL) {
-        util_fatal("did not get a running module back from module start method");
-    }
-
     new_member->module = new_module;
+
     if (running_modules == NULL) {
         running_modules = new_member;
     } else {
@@ -113,18 +98,47 @@ module_create(const struct module_info *info, const char *config_section) {
         running_modules = new_member;
     }
 
-    log_debug("config section '%s' started", config_section);
+    log_debug("config section '%s' created", config_section);
 
     return new_module;
 }
 
-enum module_status
-module_stop(UNUSED struct module *module) {
-    return module->info->stop(module);
+UNUSED static void
+module_destroy(struct module *module) {
+    free(module->label);
+    free(module);
+}
+
+struct module *
+module_start(const char *name, const char *config_section) {
+    const struct module_info *info = module_get_info(name);
+
+    if (info == NULL) {
+        util_fatal("could not find module implementation for '%s'", name);
+    }
+
+    log_debug("Starting module instance '%s' in runloop", config_section);
+
+    struct module *module = module_create(info, config_section);
+
+    if (module == NULL) {
+        util_fatal("Could not create module '%s'", config_section);
+    }
+
+    module->info->lifecycle.start(module);
+
+    return module;
+}
+
+void
+module_stop(struct module *module) {
+    log_trace("stopping module: %s", module->label);
+    module->info->lifecycle.stop(module);
 }
 
 void
 module_stop_all(void) {
+    log_debug("stopping all modules");
     struct running_module_list *p = running_modules;
 
     while(p != NULL) {

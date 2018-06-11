@@ -92,39 +92,14 @@ autodie_handler(const char *function, int error, const char *message) {
 
 static void
 start_module_handler(bool should_run, void *context) {
-    const void **args = context;
-    const struct module_info *module_info = args[0];
-    const char *section_name = args[1];
-
     if (should_run) {
-        log_debug("Starting module instance '%s' in runloop", section_name);
-
-        if (module_create(module_info, section_name) == NULL) {
-            util_fatal("Could not start module '%s'", section_name);
-        }
-
+        char *config_section = context;
+        const char *module_name = configfile_rgets_section_key(config_section, "module.name");
+        log_debug("config section '%s' module.name = '%s'", config_section, module_name);
+        module_start(module_name, config_section);
     }
 
-    free(args);
-}
-
-void
-handle_config_section(const char *section) {
-    const char *module_name = configfile_rgets_section_key(section, "module.name");
-
-    log_debug("config section '%s' module.name = '%s'", section, module_name);
-    const struct module_info *new_module_info = module_get_info(module_name);
-
-    if (new_module_info == NULL) {
-        util_fatal("could not find module implementation for '%s'", module_name);
-    }
-
-    const void **args = ad_calloc(2, sizeof(void *));
-    args[0] = new_module_info;
-    args[1] = section;
-
-    log_trace("scheduling module '%s' to start later", section);
-    runloop_run_later(start_module_handler, args);
+    free(context);
 }
 
 void
@@ -159,8 +134,8 @@ main(UNUSED int argc, UNUSED char **argv) {
 
     int num_sections = configfile_get_section_count();
     for(int i = 0; i < num_sections; i++) {
-        const char *section_name = configfile_get_section_name(i);
-        handle_config_section(section_name);
+        char *section_name = ad_strdup(configfile_get_section_name(i));
+        runloop_run_later(start_module_handler, section_name);
     }
 
     runloop_run();

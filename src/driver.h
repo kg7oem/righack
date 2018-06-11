@@ -54,6 +54,7 @@
 
 #include <inttypes.h>
 
+#define DRIVER_LIFECYCLE(name) { .bootstrap = name##_lifecycle_bootstrap, .init = name##_lifecycle_init, .cleanup = name##_lifecycle_cleanup }
 #define DRIVER_CALL_OP(driver, interface, operation) driver->info->op.interface.operation(driver)
 // FIXME why can't this pass arguments to the function pointer?
 //#define DRIVER_CALL_OP(driver, interface, operation, ...) driver->info->op.interface.operation(driver, __VA_ARGS_)

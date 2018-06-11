@@ -30,47 +30,40 @@
 
 #define MODULE_NAME "test"
 
-enum module_status test_init_handler(void) {
-    log_debug("test module initialized");
-    return module_ok;
+static void
+test_lifecycle_bootstrap(void) {
+    log_lots("bootstrapping the test module");
 }
 
-struct module *
-test_start_handler(UNUSED const char *config_name) {
-    struct module *new_module = ad_malloc(sizeof(struct module));
-
-    new_module->label = config_name;
-    new_module->info = module_get_info(MODULE_NAME);
-
+static void
+test_lifecycle_start(struct module *module) {
     struct driver *vserial = driver_create("vserial");
+
     if (vserial == NULL) {
         util_fatal("could not create instance of vserial driver");
     }
 
-    new_module->private = vserial;
+    module->private = vserial;
 
-    log_info("test module started: '%s'", config_name);
-
-    return new_module;
+    log_info("test module started: '%s'", module->label);
 }
 
-enum module_status
-test_stop_handler(UNUSED struct module *info) {
-    struct driver *vserial = info->private;
+static void
+test_lifecycle_stop(struct module *module) {
     log_debug("test module stopping");
 
-    driver_destroy(vserial, NULL);
+    struct driver *vserial = module->private;
 
-    return module_ok;
+    if (vserial != NULL) {
+        driver_destroy(vserial, NULL);
+    }
 }
 
 const struct module_info *
 test_module_info(void) {
     static const struct module_info our_module_info = {
             .name = MODULE_NAME,
-            .init = test_init_handler,
-            .start = test_start_handler,
-            .stop = test_stop_handler,
+            .lifecycle = MODULE_LIFECYCLE(test),
     };
 
     return &our_module_info;
