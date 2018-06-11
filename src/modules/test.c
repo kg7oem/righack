@@ -31,6 +31,16 @@
 #define MODULE_NAME "test"
 
 static void
+update_flow_control(UNUSED struct driver *driver, struct driver_rs232_fc *control_lines) {
+    log_debug("got flow control status change");
+
+    if (control_lines->cts) log_trace("  CTS");
+    if (control_lines->rts) log_trace("  RTS");
+    if (control_lines->dtr) log_trace("  DTR");
+    if (control_lines->dsr) log_trace("  DSR");
+}
+
+static void
 test_lifecycle_bootstrap(void) {
     log_lots("bootstrapping the test module");
 }
@@ -43,8 +53,9 @@ test_lifecycle_start(struct module *module) {
         util_fatal("could not create instance of vserial driver");
     }
 
-    module->private = vserial;
+    vserial->cb->rs232.fc_changed = update_flow_control;
 
+    module->private = vserial;
     log_info("test module started: '%s'", module->label);
 }
 

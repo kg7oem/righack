@@ -58,10 +58,10 @@ static TLOCAL bool run_once_prepare_started = false;
 void
 runloop_bootstrap(void) {
     log_debug("bootstrapping the runloop");
-    thread_loop = ad_malloc(sizeof(uv_loop_t));
+    thread_loop = util_zalloc(sizeof(uv_loop_t));
     uv_loop_init(thread_loop);
 
-    run_once_prepare = ad_malloc(sizeof(uv_prepare_t));
+    run_once_prepare = util_zalloc(sizeof(uv_prepare_t));
     uv_prepare_init(thread_loop, run_once_prepare);
 }
 
@@ -163,8 +163,8 @@ run_once_prepare_cb(uv_prepare_t *prepare) {
 
 struct run_once
 runloop_run_later(runloop_stateful_cb cb, void *context) {
-    struct run_once_private *new_job = ad_malloc(sizeof(struct run_once_private));
-    struct run_once_list *queue_entry = ad_malloc(sizeof(struct run_once_list));
+    struct run_once_private *new_job = util_zalloc(sizeof(struct run_once_private));
+    struct run_once_list *queue_entry = util_zalloc(sizeof(struct run_once_list));
     struct run_once retval = {
             .cb = cb,
             .context = context,
@@ -203,8 +203,8 @@ struct runloop_timer_private {
 
 struct runloop_timer *
 runloop_timer_create(runloop_stateful_cb cb, void *context) {
-    struct runloop_timer *timer = ad_malloc(sizeof(struct runloop_timer));
-    timer->private = ad_malloc(sizeof(struct runloop_timer_private));
+    struct runloop_timer *timer = util_zalloc(sizeof(struct runloop_timer));
+    timer->private = util_zalloc(sizeof(struct runloop_timer_private));
 
     timer->context = context;
     timer->cb = cb;
@@ -276,10 +276,10 @@ struct runloop_poll *
 runloop_poll_create(int fd, runloop_poll_cb cb) {
     log_info("creating a poll dohicky");
 
-    struct runloop_poll *new_poll = ad_malloc(sizeof(struct runloop_poll));
+    struct runloop_poll *new_poll = util_zalloc(sizeof(struct runloop_poll));
     new_poll->cb = cb;
 
-    new_poll->private = ad_malloc(sizeof(struct runloop_poll_private));
+    new_poll->private = util_zalloc(sizeof(struct runloop_poll_private));
     new_poll->private->fd = fd;
 
     uv_poll_init(thread_loop, &new_poll->private->uv_poll, new_poll->private->fd);

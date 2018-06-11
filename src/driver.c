@@ -51,7 +51,7 @@ driver_get_info(const char *name) {
 
 static void
 driver_register(const struct driver_info *info) {
-    struct driver_list *new_member = ad_malloc(sizeof(struct driver_list));
+    struct driver_list *new_member = util_zalloc(sizeof(struct driver_list));
 
     if (driver_get_info(info->name)) {
         util_fatal("attempt to double register driver with name '%s'", info->name);
@@ -103,17 +103,16 @@ driver_create(const char *name) {
         return NULL;
     }
 
-    struct driver new_driver = {
-            .user = NULL,
-            .info = info,
-            .cb = ad_malloc(sizeof(struct driver_interface_cb)),
-    };
+    struct driver *new_driver = util_zalloc(sizeof(struct driver));
+    new_driver->user = NULL;
+    new_driver->info = info;
+    new_driver->cb = util_zalloc(sizeof(struct driver_interface_cb));
 
     log_debug("vserial driver was created");
 
-    info->lifecycle.init(&new_driver);
+    info->lifecycle.init(new_driver);
 
-    return util_memdup(&new_driver, sizeof(new_driver));
+    return new_driver;
 }
 
 void

@@ -20,6 +20,7 @@
  */
 
 #include <errno.h>
+#include <fcntl.h>
 #include <linux/limits.h>
 #include <stdarg.h>
 #include <stdio.h>
@@ -97,4 +98,17 @@ util_get_link_target(const char *path) {
     target[size] = 0;
 
     return target;
+}
+
+void
+util_set_nonblock(int fd) {
+    int flags = fcntl(fd, F_GETFL, 0);
+
+    if (flags < 0) {
+        util_fatal("could not fcntl(%d, F_GETFL, 0): %m", fd);
+    }
+
+    if (fcntl(fd, F_SETFL, flags | O_NONBLOCK) < 0) {
+        util_fatal("could not fcntl(%d, F_SETFL, O_NONBLOCK): %m", fd);
+    }
 }

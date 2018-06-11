@@ -56,12 +56,50 @@ struct vserial {
 };
 
 struct vserial_context {
+    struct driver *driver;
     struct runloop_poll *poll;
     struct vserial *vserial;
+    int modem_bits;
 };
 
 void
-vserial_handle_packet(uint8_t status) {
+vserial_deliver_fc_changed(struct vserial_context *context) {
+    struct driver_rs232_fc control_lines = {
+            .cts = context->modem_bits & TIOCM_CTS,
+            .rts = context->modem_bits & TIOCM_RTS,
+            .dtr = context->modem_bits & TIOCM_DTR,
+            .dsr = context->modem_bits & TIOCM_DSR,
+    };
+
+    DRIVER_CALL_CB(context->driver, rs232, fc_changed, &control_lines);
+}
+
+void
+vserial_deliver_fc_changed_cb(bool should_run, void *context) {
+    if (should_run) {
+        vserial_deliver_fc_changed((struct vserial_context *)context);
+    }
+}
+
+void
+vserial_handle_mset(struct vserial_context *context) {
+    int slave_fd = context->vserial->pty_slave.fd;
+    int new_modem_bits;
+
+    if (ioctl(slave_fd, TIOCMGET, &new_modem_bits) == -1) {
+        util_fatal("Could not ioctl(TIOCMGET): %m");
+    }
+
+    if (context->modem_bits == new_modem_bits) {
+        return;
+    }
+
+    context->modem_bits = new_modem_bits;
+    vserial_deliver_fc_changed(context);
+}
+
+void
+vserial_handle_packet(uint8_t status, struct vserial_context *context) {
     log_trace("handling status packet");
     if (status & TIOCPKT_FLUSHREAD) log_trace("  FLUSHREAD");
     if (status & TIOCPKT_FLUSHWRITE) log_trace("  FLUSHWRITE");
@@ -70,7 +108,11 @@ vserial_handle_packet(uint8_t status) {
     if (status & TIOCPKT_DOSTOP) log_trace("  DOSTOP");
     if (status & TIOCPKT_NOSTOP) log_trace("  NOSTOP");
     if (status & TIOCPKT_IOCTL) log_trace("  IOCTL");
-    if (status & TIOCPKT_MSET) log_trace("  MSET");
+
+    if (status & TIOCPKT_MSET) {
+        log_trace("  MSET");
+        vserial_handle_mset(context);
+    }
 }
 
 void
@@ -89,9 +131,8 @@ vserial_handle_read(struct vserial_context *context) {
         util_fatal("read data from the slave PTY");
     } else {
         log_debug("Got a status packet: %u", buf[0]);
-        vserial_handle_packet(buf[0]);
+        vserial_handle_packet(buf[0], context);
     }
-
 }
 
 void
@@ -103,7 +144,7 @@ vserial_poll_cb(UNUSED struct runloop_poll *poll, uint64_t events) {
     if (events & PEVENT_WRITE) log_trace("  WRITE");
     if (events & PEVENT_PRIO) log_trace("  PRIORITY");
 
-    if ((events & PEVENT_PRIO) && (! (events & PEVENT_READ))) {
+    if ((events & PEVENT_PRIO) && ! (events & PEVENT_READ)) {
         util_fatal("Got a PRIO event with out READ");
     }
 
@@ -151,7 +192,7 @@ vserial_manage_symlink(const char *target, const char *pty_slave) {
 
 struct vserial *
 vserial_create(const char *name_arg) {
-    struct vserial *vserial = ad_malloc(sizeof(struct vserial));
+    struct vserial *vserial = util_zalloc(sizeof(struct vserial));
     struct termios *master_terminfo = &vserial->pty_master.terminfo;
     int *master = &vserial->pty_master.fd;
     int *slave = &vserial->pty_slave.fd;
@@ -162,6 +203,8 @@ vserial_create(const char *name_arg) {
     if (openpty(master, slave, slave_path, NULL, NULL)) {
         util_fatal("could not openpty(): %m");
     }
+
+    util_set_nonblock(*master);
 
     // packet mode enables delivery of status information
     // about the slave to the master
@@ -218,13 +261,22 @@ vserial_lifecycle_bootstrap(void) {
 }
 
 static void
-vserial_lifecycle_init(UNUSED struct driver *driver) {
+vserial_lifecycle_init(struct driver *driver) {
     log_debug("vserial driver instance is initializing");
-    struct vserial_context *context = ad_malloc(sizeof(struct vserial_context));
+    struct vserial_context *context = util_zalloc(sizeof(struct vserial_context));
+    int modem_bits = 0;
 
+    context->driver = driver;
     context->vserial = vserial_create("/home/tyler/.wine/com1");
     context->poll = runloop_poll_create(context->vserial->pty_master.fd, vserial_poll_cb);
     context->poll->context = context;
+
+    if (ioctl(context->vserial->pty_slave.fd, TIOCMGET, &modem_bits) == -1) {
+        util_fatal("Could not ioctl(TIOCMGET): %m");
+    }
+
+    context->modem_bits = modem_bits;
+    runloop_run_later(vserial_deliver_fc_changed_cb, context);
 
     runloop_poll_start(context->poll, PEVENT_READ | PEVENT_PRIO);
 }

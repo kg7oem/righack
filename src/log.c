@@ -109,7 +109,7 @@ void log__level_args(enum log_source source, UNUSED enum log_level level, const 
     FILE *output = stdout;
 
     if (message_buf == NULL) {
-        message_buf = ad_malloc(CONFIG_LOG_SIZE);
+        message_buf = util_zalloc(CONFIG_LOG_SIZE);
     }
 
     if (level >= log_level_warn) {

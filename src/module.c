@@ -60,7 +60,7 @@ module_get_info(const char *name) {
 
 static void module_register(const struct module_info *info) {
     struct loaded_module_list *orig = loaded_modules;
-    struct loaded_module_list *will_add = ad_malloc(sizeof(struct loaded_module_list));
+    struct loaded_module_list *will_add = util_zalloc(sizeof(struct loaded_module_list));
     const char *name = info->name;
 
     if (module_get_info(name)) {
@@ -82,12 +82,12 @@ struct module *
 module_create(const struct module_info *info, const char *config_section) {
     log_verbose("creating module '%s' for configuration '%s'", info->name, config_section);
 
-    struct module *new_module = ad_malloc(sizeof(struct module));
+    struct module *new_module = util_zalloc(sizeof(struct module));
     new_module->label = ad_strdup(config_section);
     new_module->info = info;
     new_module->private = NULL;
 
-    struct running_module_list *new_member = ad_malloc(sizeof(struct running_module_list));
+    struct running_module_list *new_member = util_zalloc(sizeof(struct running_module_list));
     new_member->next = NULL;
     new_member->module = new_module;
 

@@ -53,12 +53,13 @@
 #define SRC_DRIVER_H_
 
 #include <inttypes.h>
+#include <stdbool.h>
 
 #define DRIVER_LIFECYCLE(name) { .bootstrap = name##_lifecycle_bootstrap, .init = name##_lifecycle_init, .cleanup = name##_lifecycle_cleanup }
 #define DRIVER_CALL_OP(driver, interface, operation) driver->info->op.interface.operation(driver)
 // FIXME why can't this pass arguments to the function pointer?
 //#define DRIVER_CALL_OP(driver, interface, operation, ...) driver->info->op.interface.operation(driver, __VA_ARGS_)
-//#define DRIVER_CALL_CB(driver, interface, cbname, ...) driver->cb->interface.cbname(driver, __VA_ARGS__)
+#define DRIVER_CALL_CB(driver, interface, cbname, ...) if (driver->cb->interface.cbname != NULL) { driver->cb->interface.cbname(driver, __VA_ARGS__); }
 
 struct driver;
 struct driver_info;
@@ -95,12 +96,26 @@ struct driver_stream_int_op {
     driver_stream_set_mask_op set_mask;
 };
 
+struct driver_rs232_fc {
+    bool rts;
+    bool cts;
+    bool dtr;
+    bool dsr;
+};
+
+typedef void (*driver_rs232_fc_changed_cb)(struct driver *, struct driver_rs232_fc *);
+
+struct driver_rs232_int_cb {
+    driver_rs232_fc_changed_cb fc_changed;
+};
+
 struct driver_interface_op {
     const struct driver_stream_int_op stream;
 };
 
 struct driver_interface_cb {
     struct driver_stream_int_cb stream;
+    struct driver_rs232_int_cb rs232;
 };
 
 typedef void (*driver_bootstrap_handler)(void);
