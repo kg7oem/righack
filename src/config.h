@@ -22,10 +22,14 @@
 #ifndef SRC_CONFIG_H_
 #define SRC_CONFIG_H_
 
+#include <linux/limits.h>
 #include <stdio.h>
+
+#define CONFIG_OS_UNIX
 
 #define CONFIG_READ_SIZE BUFSIZ
 #define CONFIG_WRITE_SIZE BUFSIZ
 #define CONFIG_LOG_SIZE 4096
+#define CONFIG_PATH_LEN PATH_MAX
 
 #endif /* SRC_CONFIG_H_ */

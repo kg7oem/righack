@@ -264,3 +264,80 @@ void runloop_timer_cancel(struct runloop_timer *timer) {
     }
     uv_timer_stop(&timer->private->uv_timer);
 }
+
+#ifdef CONFIG_OS_UNIX
+
+struct runloop_poll_private {
+    uv_poll_t uv_poll;
+    int fd;
+};
+
+struct runloop_poll *
+runloop_poll_create(int fd, runloop_poll_cb cb) {
+    log_info("creating a poll dohicky");
+
+    struct runloop_poll *new_poll = ad_malloc(sizeof(struct runloop_poll));
+    new_poll->cb = cb;
+
+    new_poll->private = ad_malloc(sizeof(struct runloop_poll_private));
+    new_poll->private->fd = fd;
+
+    uv_poll_init(thread_loop, &new_poll->private->uv_poll, new_poll->private->fd);
+    new_poll->private->uv_poll.data = new_poll;
+
+    return new_poll;
+}
+
+static void
+runloop_poll_close_cb(uv_handle_t *uv_poll) {
+    struct runloop_poll *poll = uv_poll->data;
+
+    poll->cb(poll, 0);
+
+    free(poll->private);
+    free(poll);
+}
+
+void
+runloop_poll_destroy(struct runloop_poll *poll) {
+    if (uv_is_active((uv_handle_t *)&poll->private->uv_poll)) {
+        util_fatal("attempt to destroy a poll handle that is active");
+    }
+
+    uv_close((uv_handle_t *)&poll->private->uv_poll, runloop_poll_close_cb);
+}
+
+void
+runloop_poll_run_cb(uv_poll_t *uv_poll, int uv_status, int uv_events) {
+    struct runloop_poll *poll = uv_poll->data;
+
+    if (uv_status < 0) {
+        // FIXME there needs to be an error handling system made that
+        // does not require exposing libuv
+        util_fatal("Can not yet handle a uv poll error: %s", uv_strerror(uv_status));
+    }
+
+    uint64_t events = 0;
+    if (uv_events & UV_READABLE) events |= PEVENT_READ;
+    if (uv_events & UV_WRITABLE) events |= PEVENT_WRITE;
+    if (uv_events & UV_PRIORITIZED) events |= PEVENT_PRIO;
+
+    if (events == 0) {
+        util_fatal("libuv did not signal any events");
+    }
+
+    poll->cb(poll, events);
+}
+
+void
+runloop_poll_start(struct runloop_poll *poll, uint64_t events) {
+    int uv_events = 0;
+
+    if (events & PEVENT_READ) uv_events |= UV_READABLE;
+    if (events & PEVENT_WRITE) uv_events |= UV_WRITABLE;
+    if (events & PEVENT_PRIO) uv_events |= UV_PRIORITIZED;
+
+    uv_poll_start(&poll->private->uv_poll, uv_events, runloop_poll_run_cb);
+}
+
+#endif /* CONFIG_OS_UNIX */

@@ -25,6 +25,8 @@
 #include <stdbool.h>
 #include <uv.h>
 
+#include "config.h"
+
 typedef void (*runloop_generic_cb)(void *);
 typedef void (*runloop_stateful_cb)(bool, void *);
 
@@ -56,5 +58,28 @@ void runloop_timer_destroy(struct runloop_timer *);
 void runloop_timer_schedule(struct runloop_timer *, uint64_t, uint64_t);
 void runloop_timer_cancel(struct runloop_timer *);
 void runloop_timer_reset(struct runloop_timer *);
+
+#ifdef CONFIG_OS_UNIX
+
+#define PEVENT_ERROR (1 << 0)
+#define PEVENT_READ (1 << 1)
+#define PEVENT_WRITE (1 << 2)
+#define PEVENT_PRIO (1 << 3)
+
+struct runloop_poll;
+struct runloop_poll_private;
+typedef void (*runloop_poll_cb)(struct runloop_poll *, uint64_t);
+
+struct runloop_poll {
+    runloop_poll_cb cb;
+    void *context;
+    struct runloop_poll_private *private;
+};
+
+struct runloop_poll * runloop_poll_create(int, runloop_poll_cb);
+void runloop_poll_destroy(struct runloop_poll *);
+void runloop_poll_start(struct runloop_poll *, uint64_t);
+
+#endif /* CONFIG_OS_UNIX */
 
 #endif /* SRC_RUNLOOP_H_ */
