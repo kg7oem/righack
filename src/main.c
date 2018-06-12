@@ -32,7 +32,6 @@
 #include "module.h"
 #include "runloop.h"
 #include "util.h"
-#include "vserial.h"
 
 static int
 hamlib_debug_handler(enum rig_debug_level_e debug_level, UNUSED rig_ptr_t user_data, UNUSED const char *fmt, UNUSED va_list args) {
