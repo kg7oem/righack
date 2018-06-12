@@ -135,6 +135,7 @@ struct driver_info {
 
 struct driver {
     void *user;
+    void *private;
     const struct driver_info *info;
     struct driver_interface_cb *cb;
     // FIXME this should be private / opaque to the user

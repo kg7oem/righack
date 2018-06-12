@@ -55,6 +55,8 @@ static TLOCAL struct run_once_list *run_once_last = NULL;
 static TLOCAL uv_prepare_t *run_once_prepare = NULL;
 static TLOCAL bool run_once_prepare_started = false;
 
+static TLOCAL uv_signal_t *int_signal;
+
 void
 runloop_bootstrap(void) {
     log_debug("bootstrapping the runloop");
@@ -93,6 +95,10 @@ runloop_cleanup(void) {
 
     log_debug("starting to cleanup the runloop");
 
+    if (int_signal != NULL) {
+        uv_close((uv_handle_t *)int_signal, NULL);
+    }
+
     // first stop any modules and give them a chance to process
     // their cleanup callbacks
     module_stop_all();
@@ -112,10 +118,17 @@ runloop_cleanup(void) {
         util_fatal("could not cleanup runloop because it was not empty");
     }
 
+    if (int_signal != NULL) free(int_signal);
     free(thread_loop);
     thread_loop = NULL;
 
     log_lots("runloop is completely cleaned up");
+}
+
+static void
+int_signal_cb(UNUSED uv_signal_t *handle, UNUSED int signum) {
+    log_info("Received INT signal, shutting down");
+    uv_stop(thread_loop);
 }
 
 bool
@@ -124,10 +137,17 @@ runloop_run(void) {
         util_fatal("runloop_run() called but there was no per thread runloop defined");
     }
 
+    if (int_signal == NULL) {
+        int_signal = util_zalloc(sizeof(*int_signal));
+        uv_signal_init(thread_loop, int_signal);
+    }
+
     log_debug("about to give control to runloop");
+    uv_signal_start(int_signal, int_signal_cb, SIGINT);
     in_runloop_context = true;
     bool retval = uv_run(thread_loop, UV_RUN_DEFAULT);
     in_runloop_context = false;
+    uv_signal_stop(int_signal);
     log_debug("control from runloop returned; retval = %i", retval);
 
     return retval;

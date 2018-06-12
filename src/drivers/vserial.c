@@ -274,6 +274,8 @@ vserial_lifecycle_init(struct driver *driver, const char *config_section) {
     context->poll = runloop_poll_create(context->vserial->pty_master.fd, vserial_poll_cb);
     context->poll->context = context;
 
+    driver->private = context;
+
     if (ioctl(context->vserial->pty_slave.fd, TIOCMGET, &modem_bits) == -1) {
         util_fatal("Could not ioctl(TIOCMGET): %m");
     }
@@ -288,8 +290,8 @@ static void
 vserial_lifecycle_cleanup(UNUSED struct driver *driver) {
     log_debug("vserial driver instance is being destroyed");
 
-    if (driver->user != NULL) {
-        struct vserial_context *context = driver->user;
+    if (driver->private != NULL) {
+        struct vserial_context *context = driver->private;
 
         runloop_poll_destroy(context->poll);
         vserial_destroy(context->vserial);
