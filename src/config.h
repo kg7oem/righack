@@ -22,7 +22,7 @@
 #ifndef SRC_CONFIG_H_
 #define SRC_CONFIG_H_
 
-#include <linux/limits.h>
+#include <limits.h>
 #include <stdio.h>
 
 #define CONFIG_OS_UNIX

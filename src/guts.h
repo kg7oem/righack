@@ -31,6 +31,6 @@ enum exit_value {
     exit_nomem = 100,
 };
 
-void guts_exit(enum exit_value);
+void guts_exit(enum exit_value) NORETURN;
 
 #endif /* SRC_GUTS_H_ */

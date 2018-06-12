@@ -23,6 +23,7 @@
 #define SRC_TYPES_H_
 
 #define UNUSED __attribute__((unused))
+#define NORETURN __attribute__((noreturn))
 
 // portable thread local storage - thanks SO!
 // https://stackoverflow.com/questions/18298280/how-to-declare-a-variable-as-thread-local-portably
