@@ -1,43 +1,46 @@
 diff --git a/drivers/tty/pty.c b/drivers/tty/pty.c
-index 6c7151e..4903138 100644
+index 6c7151e..0be27a3 100644
 --- a/drivers/tty/pty.c
 +++ b/drivers/tty/pty.c
-@@ -361,6 +361,34 @@ static void pty_stop(struct tty_struct *tty)
+@@ -361,6 +361,37 @@ static void pty_stop(struct tty_struct *tty)
  	}
  }
  
 +/* KG7OEM */
 +static int pts_tiocmget(struct tty_struct *tty)
 +{
-+	int retval;
++	int retval = -EINVAL;
 +
-+	spin_lock_irq(&tty->ctrl_lock);
-+	retval = tty->fake_mbits;
-+	spin_unlock_irq(&tty->ctrl_lock);
++	if (tty->link && tty->link->packet) {
++		spin_lock_irq(&tty->ctrl_lock);
++		retval = tty->fake_mbits;
++		spin_unlock_irq(&tty->ctrl_lock);
++	}
++
 +	return retval;
 +}
 +
 +static int pts_tiocmset(struct tty_struct *tty, unsigned int set, unsigned int clear)
 +{
-+	struct tty_struct *master = tty->link;
++	int retval = -EINVAL;
 +
-+	spin_lock_irq(&tty->ctrl_lock);
-+	tty->fake_mbits |= set;
-+	tty->fake_mbits &= ~clear;
-+	spin_unlock_irq(&tty->ctrl_lock);
-+
-+	if (master->packet) {
++	if (tty->link && tty->link->packet) {
++		spin_lock_irq(&tty->ctrl_lock);
++		tty->fake_mbits |= set;
++		tty->fake_mbits &= ~clear;
 +		tty->ctrl_status |= TIOCPKT_MSET;
-+		wake_up_interruptible(&master->read_wait);
++		wake_up_interruptible(&tty->link->read_wait);
++		spin_unlock_irq(&tty->ctrl_lock);
++		retval = 0;
 +	}
 +
-+	return 0;
++	return retval;
 +}
 +
  /**
   *	pty_common_install		-	set up the pty pair
   *	@driver: the pty driver
-@@ -781,6 +809,9 @@ static const struct tty_operations pty_unix98_ops = {
+@@ -781,6 +812,9 @@ static const struct tty_operations pty_unix98_ops = {
  	.start = pty_start,
  	.stop = pty_stop,
  	.cleanup = pty_cleanup,
