@@ -56,10 +56,8 @@
 #include <stdbool.h>
 
 #define DRIVER_LIFECYCLE(name) { .bootstrap = name##_lifecycle_bootstrap, .init = name##_lifecycle_init, .cleanup = name##_lifecycle_cleanup }
-#define DRIVER_CALL_OP(driver, interface, operation) driver->info->op.interface.operation(driver)
-// FIXME why can't this pass arguments to the function pointer?
-//#define DRIVER_CALL_OP(driver, interface, operation, ...) driver->info->op.interface.operation(driver, __VA_ARGS_)
-#define DRIVER_CALL_CB(driver, interface, cbname, ...) if (driver->cb->interface.cbname != NULL) { driver->cb->interface.cbname(driver, __VA_ARGS__); }
+#define DRIVER_CALL_OP(driver, interface, operation, ...) driver->info->op.interface.operation(driver,##__VA_ARGS__)
+#define DRIVER_CALL_CB(driver, interface, cbname, ...) if (driver->cb->interface.cbname != NULL) { driver->cb->interface.cbname(driver,##__VA_ARGS__); }
 
 struct driver;
 struct driver_info;
@@ -119,7 +117,7 @@ struct driver_interface_cb {
 };
 
 typedef void (*driver_bootstrap_handler)(void);
-typedef void (*driver_init_handler)(struct driver *);
+typedef void (*driver_init_handler)(struct driver *, const char *);
 typedef void (*driver_cleanup_handler)(struct driver *);
 
 struct driver_lifecycle_op {
@@ -143,8 +141,7 @@ struct driver {
     enum driver_status status;
 };
 
-
-struct driver * driver_create(const char *);
+struct driver * driver_create(const char *, const char *);
 void driver_bootstrap(void);
 void driver_destroy(struct driver *, void *notify_cb);
 void driver_load_plugins(void);

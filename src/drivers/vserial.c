@@ -31,6 +31,8 @@
 #include <termios.h>
 #include <unistd.h>
 
+#include "../config.h"
+#include "../configfile.h"
 #include "../driver.h"
 #include "../external/autodie.h"
 #include "../log.h"
@@ -261,13 +263,14 @@ vserial_lifecycle_bootstrap(void) {
 }
 
 static void
-vserial_lifecycle_init(struct driver *driver) {
+vserial_lifecycle_init(struct driver *driver, const char *config_section) {
     log_debug("vserial driver instance is initializing");
     struct vserial_context *context = util_zalloc(sizeof(struct vserial_context));
+    const char *config_path = configfile_rgets_section_key(config_section, "vserial.port");
     int modem_bits = 0;
 
     context->driver = driver;
-    context->vserial = vserial_create("/home/tyler/.wine/com1");
+    context->vserial = vserial_create(config_path);
     context->poll = runloop_poll_create(context->vserial->pty_master.fd, vserial_poll_cb);
     context->poll->context = context;
 

@@ -19,8 +19,11 @@
  *
  */
 
+#include <hamlib/rig.h>
 #include <stdlib.h>
+#include <string.h>
 
+#include "../configfile.h"
 #include "../driver.h"
 #include "../external/autodie.h"
 #include "../log.h"
@@ -30,6 +33,11 @@
 
 #define MODULE_NAME "test"
 
+struct context {
+    struct driver *vserial;
+    RIG *rig;
+};
+
 static void
 update_flow_control(UNUSED struct driver *driver, struct driver_rs232_fc *control_lines) {
     log_debug("got flow control status change");
@@ -38,6 +46,26 @@ update_flow_control(UNUSED struct driver *driver, struct driver_rs232_fc *contro
     if (control_lines->rts) log_trace("  RTS");
     if (control_lines->dtr) log_trace("  DTR");
     if (control_lines->dsr) log_trace("  DSR");
+
+    struct context *context = driver->user;
+
+    ptt_t ptt_state = RIG_PTT_OFF;
+    int ret;
+
+    if (control_lines->rts) {
+        ptt_state = RIG_PTT_ON;
+    }
+
+    ret = rig_set_ptt(context->rig, RIG_VFO_CURR, ptt_state);
+    if (ret != RIG_OK) {
+        util_fatal("Could not set transmit: %s", rigerror(ret));
+    }
+
+    if (ptt_state == RIG_PTT_ON) {
+        log_info("Starting to transmit");
+    } else {
+        log_info("Done transmitting");
+    }
 }
 
 static void
@@ -47,15 +75,41 @@ test_lifecycle_bootstrap(void) {
 
 static void
 test_lifecycle_start(struct module *module) {
-    struct driver *vserial = driver_create("vserial");
+    struct context *context = util_zalloc(sizeof(struct context));
 
-    if (vserial == NULL) {
+    context->vserial = driver_create("vserial", module->label);
+
+    if (context->vserial == NULL) {
         util_fatal("could not create instance of vserial driver");
     }
 
-    vserial->cb->rs232.fc_changed = update_flow_control;
+    context->vserial->cb->rs232.fc_changed = update_flow_control;
+    context->vserial->user = context;
 
-    module->private = vserial;
+    rig_model_t rigid = configfile_rgeti_section_key(module->label, "hamlib.rigid");
+    context->rig = rig_init(rigid);
+
+    log_info("using hamlib rigid %d", rigid);
+
+    if (! context->rig) {
+        util_fatal("could not rig_init(%d)", rigid);
+    }
+
+    const char *hamlib_serial_port = configfile_gets_section_key(module->label, "hamlib.serial.port");
+    if (hamlib_serial_port != NULL) {
+        strncpy(
+                context->rig->state.rigport.pathname,
+                hamlib_serial_port,
+                FILPATHLEN - 1
+            );
+    }
+
+    int ret = rig_open(context->rig);
+    if (ret != RIG_OK) {
+        util_fatal("Could not rig_open(): %s", rigerror(ret));
+    }
+
+    module->private = context;
     log_info("test module started: '%s'", module->label);
 }
 
@@ -63,11 +117,18 @@ static void
 test_lifecycle_stop(struct module *module) {
     log_debug("test module stopping");
 
-    struct driver *vserial = module->private;
+    struct context *context = module->private;
 
-    if (vserial != NULL) {
-        driver_destroy(vserial, NULL);
+    if (context->vserial != NULL) {
+        driver_destroy(context->vserial, NULL);
     }
+
+    if (context->rig != NULL) {
+        rig_close(context->rig);
+        rig_cleanup(context->rig);
+    }
+
+    free(context);
 }
 
 const struct module_info *

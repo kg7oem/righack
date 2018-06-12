@@ -19,8 +19,8 @@
  *
  */
 
-#ifndef SRC_CONFIG_H_
-#define SRC_CONFIG_H_
+#ifndef SRC_CONFIGFILE_H_
+#define SRC_CONFIGFILE_H_
 
 #include <inttypes.h>
 #include <stdbool.h>

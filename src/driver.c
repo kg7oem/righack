@@ -96,7 +96,7 @@ driver_get_status_string(enum driver_status status) {
 }
 
 struct driver *
-driver_create(const char *name) {
+driver_create(const char *name, const char *config_section) {
     const struct driver_info *info = driver_get_info(name);
 
     if (info == NULL) {
@@ -110,7 +110,7 @@ driver_create(const char *name) {
 
     log_debug("vserial driver was created");
 
-    info->lifecycle.init(new_driver);
+    info->lifecycle.init(new_driver, config_section);
 
     return new_driver;
 }
